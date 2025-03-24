@@ -17,3 +17,25 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseKey, {
     debug: true // Enable this to see detailed auth logs
   }
 });
+
+// Add a helper function to handle email verification
+export const sendVerificationCode = async (email: string) => {
+  try {
+    console.log('Sending verification code to:', email);
+    const { error } = await supabase.auth.resend({
+      type: 'signup',
+      email,
+    });
+    
+    if (error) {
+      console.error('Error sending verification code:', error);
+      return { error };
+    }
+    
+    console.log('Verification code sent successfully');
+    return { error: null };
+  } catch (error) {
+    console.error('Exception sending verification code:', error);
+    return { error: error as Error };
+  }
+};

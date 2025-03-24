@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -10,6 +9,7 @@ import { useAuthFormValidation } from '../hooks/useAuthFormValidation';
 import { useToast } from '../components/ui/use-toast';
 import { MailCheck } from 'lucide-react';
 import VerificationCodeInput from '../components/auth/VerificationCodeInput';
+import { sendVerificationCode } from '../integrations/supabase/client';
 
 const AuthFormContent = () => {
   const { state, actions } = useAuthForm();
@@ -94,16 +94,22 @@ const AuthFormContent = () => {
     
     setResendingCode(true);
     try {
-      const { error } = await resendVerificationEmail(email);
+      console.log('AuthPage: Resending verification code to:', email);
+      // Use our helper function for more reliable code sending
+      const { error } = await sendVerificationCode(email);
+      
       if (error) {
+        console.error('AuthPage: Failed to resend code:', error);
         setError(`Failed to resend code: ${error.message}`);
       } else {
+        console.log('AuthPage: Verification code sent successfully');
         toast({
           title: "Verification code sent",
           description: `A new verification code has been sent to ${email}`,
         });
       }
     } catch (err: any) {
+      console.error('AuthPage: Error resending code:', err);
       setError(`An error occurred: ${err.message}`);
     } finally {
       setResendingCode(false);
@@ -164,6 +170,7 @@ const AuthFormContent = () => {
           throw new Error('Passwords do not match');
         }
         
+        console.log('Starting signup process for:', email);
         const { error } = await signUp(email, password, fullName, businessName);
         if (error) throw error;
         
@@ -171,8 +178,8 @@ const AuthFormContent = () => {
         setShowVerificationCodeInput(true);
         setSuccess('Account created successfully! Please enter the verification code sent to your email.');
         
-        // Automatically send the verification code
-        await handleResendCode();
+        // We don't need to call handleResendCode since signUp now automatically sends a verification code
+        console.log('Signup successful, verification code should be sent');
       }
     } catch (err: any) {
       console.error('Authentication error:', err);

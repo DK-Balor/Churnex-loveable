@@ -1,7 +1,7 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useToast } from '../../components/ui/use-toast';
-import { supabase } from '../../integrations/supabase/client';
+import { supabase, sendVerificationCode } from '../../integrations/supabase/client';
 
 interface VerificationCodeInputProps {
   email: string;
@@ -16,7 +16,19 @@ const VerificationCodeInput: React.FC<VerificationCodeInputProps> = ({
 }) => {
   const [verificationCode, setVerificationCode] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [resendDisabled, setResendDisabled] = useState(false);
+  const [countdown, setCountdown] = useState(0);
   const { toast } = useToast();
+
+  // Handle countdown for resend button
+  useEffect(() => {
+    if (countdown > 0) {
+      const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
+      return () => clearTimeout(timer);
+    } else if (countdown === 0 && resendDisabled) {
+      setResendDisabled(false);
+    }
+  }, [countdown, resendDisabled]);
 
   const handleVerifyCode = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -31,6 +43,7 @@ const VerificationCodeInput: React.FC<VerificationCodeInputProps> = ({
 
     setIsSubmitting(true);
     try {
+      console.log('Verifying code:', verificationCode, 'for email:', email);
       const { error } = await supabase.auth.verifyOtp({
         email,
         token: verificationCode,
@@ -45,6 +58,7 @@ const VerificationCodeInput: React.FC<VerificationCodeInputProps> = ({
           variant: "destructive",
         });
       } else {
+        console.log('Verification successful');
         toast({
           title: "Email verified",
           description: "Your email has been successfully verified.",
@@ -61,6 +75,39 @@ const VerificationCodeInput: React.FC<VerificationCodeInputProps> = ({
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const handleResendCode = async () => {
+    setResendDisabled(true);
+    setCountdown(60); // Disable resend for 60 seconds
+    
+    try {
+      console.log('Resending verification code to:', email);
+      const { error } = await sendVerificationCode(email);
+      
+      if (error) {
+        console.error('Error resending code:', error);
+        toast({
+          title: "Failed to resend code",
+          description: error.message || "An error occurred while sending the verification code",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Verification code sent",
+          description: `A new verification code has been sent to ${email}`,
+        });
+      }
+    } catch (error: any) {
+      console.error('Exception resending code:', error);
+      toast({
+        title: "Error",
+        description: error.message || "An error occurred while sending the verification code",
+        variant: "destructive",
+      });
+    }
+    
+    await onResendCode();
   };
 
   return (
@@ -103,11 +150,18 @@ const VerificationCodeInput: React.FC<VerificationCodeInputProps> = ({
 
       <div className="mt-3 text-center">
         <button 
-          onClick={onResendCode}
+          onClick={handleResendCode}
           type="button"
-          className="text-sm text-brand-green hover:text-brand-green-600"
+          disabled={resendDisabled}
+          className={`text-sm ${
+            resendDisabled 
+              ? 'text-gray-400 cursor-not-allowed' 
+              : 'text-brand-green hover:text-brand-green-600'
+          }`}
         >
-          Didn't receive a code? Resend
+          {resendDisabled 
+            ? `Resend code in ${countdown}s` 
+            : "Didn't receive a code? Resend"}
         </button>
       </div>
     </div>
