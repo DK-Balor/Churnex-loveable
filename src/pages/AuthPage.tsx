@@ -9,7 +9,7 @@ import { useAuthFormValidation } from '../hooks/useAuthFormValidation';
 import { useToast } from '../components/ui/use-toast';
 import { MailCheck } from 'lucide-react';
 import VerificationCodeInput from '../components/auth/VerificationCodeInput';
-import { supabase, sendVerificationEmail, verifyEmailWithLink } from '../integrations/supabase/client';
+import { supabase, sendVerificationEmail } from '../integrations/supabase/client';
 
 const AuthFormContent = () => {
   const { state, actions } = useAuthForm();
@@ -50,41 +50,41 @@ const AuthFormContent = () => {
 
   // Check for verification parameters in the URL
   useEffect(() => {
-    const verificationParam = searchParams.get('verification');
     const code = searchParams.get('code');
     
     // Handle link-based verification
-    if (verificationParam === 'link' || code) {
-      console.log('Detected verification link params:', { verificationParam, code });
+    if (code) {
+      console.log('Detected verification code in URL:', code);
       
-      // Process the verification link automatically
-      const processVerificationLink = async () => {
+      // Process the verification code automatically
+      const processVerificationCode = async () => {
         setIsLoading(true);
         try {
-          const { error, data } = await verifyEmailWithLink();
+          // The auth.exchangeCodeForSession method handles the code parameter
+          const { data, error } = await supabase.auth.exchangeCodeForSession(code);
           
           if (error) {
-            console.error('Link verification failed:', error);
+            console.error('Code verification failed:', error);
             setError(`Verification failed: ${error.message}`);
           } else {
-            console.log('Link verification succeeded:', data);
+            console.log('Code verification succeeded:', data);
             setEmailConfirmed(true);
             setSuccess('Email verified successfully! You can now sign in.');
             
-            // If user is already authenticated, redirect to dashboard
+            // If user is already authenticated after verification, redirect to dashboard
             if (data?.session?.user) {
               setTimeout(() => navigate('/dashboard'), 1500);
             }
           }
         } catch (err: any) {
-          console.error('Error processing verification link:', err);
+          console.error('Error processing verification code:', err);
           setError(`Verification error: ${err.message}`);
         } finally {
           setIsLoading(false);
         }
       };
       
-      processVerificationLink();
+      processVerificationCode();
     }
   }, [searchParams, setEmailConfirmed, navigate, setError, setSuccess, setIsLoading]);
 

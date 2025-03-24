@@ -19,7 +19,7 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseKey, {
     flowType: 'pkce',
     debug: true, // Enable this to see detailed auth logs
     // Use the fixed site URL for redirects
-    redirectTo: `${SITE_URL}/auth?verification=link`
+    redirectTo: `${SITE_URL}/auth`
   }
 });
 
@@ -28,7 +28,7 @@ export const sendVerificationEmail = async (email: string) => {
   try {
     console.log('Sending verification email to:', email);
     
-    const redirectUrl = `${SITE_URL}/auth?verification=link`;
+    const redirectUrl = `${SITE_URL}/auth`;
     console.log('Using redirect URL:', redirectUrl);
     
     // Use signInWithOtp instead of signUp for more reliable email delivery
