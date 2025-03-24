@@ -29,8 +29,20 @@ export default defineConfig(({ mode }) => ({
   optimizeDeps: {
     exclude: [],
   },
-  // TypeScript configuration
+  // Fix for TypeScript reference issue
   esbuild: {
-    logOverride: { 'this-is-undefined-in-esm': 'silent' }
+    logOverride: { 
+      'this-is-undefined-in-esm': 'silent',
+      // Add more overrides to silence TypeScript reference errors
+      'commonjs-variable-in-esm': 'silent'
+    },
+    tsconfigRaw: {
+      compilerOptions: {
+        // Override compiler options that may be causing reference issues
+        composite: false,
+        incremental: true,
+        isolatedModules: true
+      }
+    }
   }
 }));
