@@ -35,7 +35,8 @@ export default defineConfig(({ mode }) => ({
           experimentalDecorators: true,
           importsNotUsedAsValues: 'remove',
           target: 'es2020',
-          skipLibCheck: true 
+          skipLibCheck: true,
+          isolatedModules: true
         }
       }
     }
