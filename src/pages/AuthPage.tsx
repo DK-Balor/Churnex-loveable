@@ -102,6 +102,7 @@ const AuthFormContent = () => {
         }
         
         setSuccess('Login successful! Redirecting to dashboard...');
+        // Redirect will happen via useEffect when user state updates
       } else {
         // Handle signup
         if (!fullName || !businessName) {
@@ -118,6 +119,7 @@ const AuthFormContent = () => {
         
         // Show success message after successful signup
         setSuccess('Account created successfully! Redirecting to dashboard...');
+        // Redirect will happen via useEffect when user state updates
       }
     } catch (err: any) {
       console.error('Authentication error:', err);
