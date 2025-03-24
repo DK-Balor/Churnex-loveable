@@ -33,7 +33,8 @@ export default defineConfig(({ mode }) => ({
         compilerOptions: {
           experimentalDecorators: true,
           importsNotUsedAsValues: 'remove',
-          target: 'es2020'
+          target: 'es2020',
+          skipLibCheck: true // Skip type checking of declaration files
         }
       }
     }
