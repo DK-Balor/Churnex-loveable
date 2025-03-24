@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase, sendVerificationCode } from '../integrations/supabase/client';
@@ -209,7 +210,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const resendVerificationEmail = async (email: string) => {
     try {
       console.log('Resending verification email to:', email);
-      // Use the helper function we created
+      // Use the helper function we created with emailRedirectTo
       const { error } = await sendVerificationCode(email);
       
       if (error) {
@@ -224,7 +225,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       toast({
         title: "Verification email sent",
-        description: "Please check your inbox for the verification code.",
+        description: "Please check your inbox for the verification link.",
       });
       
       return { error: null };
@@ -250,7 +251,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             full_name: fullName,
             business_name: businessName
           },
-          emailRedirectTo: window.location.origin + '/auth?verified=true',
+          emailRedirectTo: `${window.location.origin}/auth?verification=link`,
           // Set session expiry to 24 hours
           expiresIn: 24 * 60 * 60
         }
@@ -277,9 +278,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           login_count: 1
         }]);
         
-        console.log('Automatically sending verification code after signup');
-        // Use our new helper function to ensure it sends properly
-        await sendVerificationCode(email);
+        console.log('Signup successful, verification email should be sent automatically');
       }
 
       return { error: response.error, data: response.data };

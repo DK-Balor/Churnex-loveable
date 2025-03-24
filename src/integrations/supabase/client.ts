@@ -22,9 +22,13 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseKey, {
 export const sendVerificationCode = async (email: string) => {
   try {
     console.log('Sending verification code to:', email);
+    // Update to use emailRedirectTo to specify where the user should be redirected after clicking the link
     const { error } = await supabase.auth.resend({
       type: 'signup',
       email,
+      options: {
+        emailRedirectTo: `${window.location.origin}/auth?verification=link`
+      }
     });
     
     if (error) {
@@ -32,10 +36,29 @@ export const sendVerificationCode = async (email: string) => {
       return { error };
     }
     
-    console.log('Verification code sent successfully');
+    console.log('Verification email sent successfully');
     return { error: null };
   } catch (error) {
     console.error('Exception sending verification code:', error);
     return { error: error as Error };
+  }
+};
+
+// Add a helper function to verify email using code from URL
+export const verifyEmailWithLink = async () => {
+  try {
+    console.log('Verifying email with link');
+    const { data, error } = await supabase.auth.getSession();
+    
+    if (error) {
+      console.error('Error verifying email with link:', error);
+      return { error, data: null };
+    }
+    
+    console.log('Email verification with link result:', data);
+    return { error: null, data };
+  } catch (error) {
+    console.error('Exception verifying email with link:', error);
+    return { error: error as Error, data: null };
   }
 };

@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -9,7 +10,7 @@ import { useAuthFormValidation } from '../hooks/useAuthFormValidation';
 import { useToast } from '../components/ui/use-toast';
 import { MailCheck } from 'lucide-react';
 import VerificationCodeInput from '../components/auth/VerificationCodeInput';
-import { sendVerificationCode } from '../integrations/supabase/client';
+import { sendVerificationCode, verifyEmailWithLink } from '../integrations/supabase/client';
 
 const AuthFormContent = () => {
   const { state, actions } = useAuthForm();
@@ -41,18 +42,50 @@ const AuthFormContent = () => {
     setBusinessNameTouched
   } = actions;
 
-  const { signIn, signUp, signOut, user, emailConfirmed, resendVerificationEmail, verifyEmail } = useAuth();
+  const { signIn, signUp, signOut, user, emailConfirmed, verifyEmail, setEmailConfirmed } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [searchParams] = useSearchParams();
   const [showVerificationCodeInput, setShowVerificationCodeInput] = useState(false);
   const [resendingCode, setResendingCode] = useState(false);
 
-  // Check if the user was redirected after clicking the verification link
+  // Check for verification parameters in the URL
   useEffect(() => {
-    const verified = searchParams.get('verified');
-    if (verified === 'true') {
-      setSuccess('Email verified successfully! You can now sign in.');
+    const verificationParam = searchParams.get('verification');
+    const code = searchParams.get('code');
+    
+    // Handle link-based verification
+    if (verificationParam === 'link' || code) {
+      console.log('Detected verification link params:', { verificationParam, code });
+      
+      // Process the verification link automatically
+      const processVerificationLink = async () => {
+        setIsLoading(true);
+        try {
+          const { error, data } = await verifyEmailWithLink();
+          
+          if (error) {
+            console.error('Link verification failed:', error);
+            setError(`Verification failed: ${error.message}`);
+          } else {
+            console.log('Link verification succeeded:', data);
+            setEmailConfirmed(true);
+            setSuccess('Email verified successfully! You can now sign in.');
+            
+            // If user is already authenticated, redirect to dashboard
+            if (data?.session?.user) {
+              setTimeout(() => navigate('/dashboard'), 1500);
+            }
+          }
+        } catch (err: any) {
+          console.error('Error processing verification link:', err);
+          setError(`Verification error: ${err.message}`);
+        } finally {
+          setIsLoading(false);
+        }
+      };
+      
+      processVerificationLink();
     }
   }, [searchParams]);
 
@@ -102,10 +135,10 @@ const AuthFormContent = () => {
         console.error('AuthPage: Failed to resend code:', error);
         setError(`Failed to resend code: ${error.message}`);
       } else {
-        console.log('AuthPage: Verification code sent successfully');
+        console.log('AuthPage: Verification email sent successfully');
         toast({
-          title: "Verification code sent",
-          description: `A new verification code has been sent to ${email}`,
+          title: "Verification email sent",
+          description: `A verification link has been sent to ${email}. Please check your inbox and click the link to verify your email.`,
         });
       }
     } catch (err: any) {
@@ -151,11 +184,11 @@ const AuthFormContent = () => {
           throw error;
         }
         
-        // If emailVerificationNeeded, show the verification code input
+        // If emailVerificationNeeded, explain that they need to verify email
         if (emailVerificationNeeded) {
-          console.log("Email verification needed, showing code input");
-          setShowVerificationCodeInput(true);
-          setSuccess('Please verify your email address');
+          console.log("Email verification needed");
+          setSuccess('Please verify your email address using the verification link we sent you.');
+          await handleResendCode();
         } else if (!error) {
           // Only show success message if email is verified
           setSuccess('Login successful! Redirecting to dashboard...');
@@ -174,12 +207,11 @@ const AuthFormContent = () => {
         const { error } = await signUp(email, password, fullName, businessName);
         if (error) throw error;
         
-        // Show verification code input after successful signup
-        setShowVerificationCodeInput(true);
-        setSuccess('Account created successfully! Please enter the verification code sent to your email.');
+        // Show success message after successful signup
+        setSuccess('Account created successfully! Please check your email for a verification link.');
         
-        // We don't need to call handleResendCode since signUp now automatically sends a verification code
-        console.log('Signup successful, verification code should be sent');
+        // We don't need to call handleResendCode since signUp now automatically sends a verification email
+        console.log('Signup successful, verification email should be sent');
       }
     } catch (err: any) {
       console.error('Authentication error:', err);
@@ -188,55 +220,6 @@ const AuthFormContent = () => {
       setIsLoading(false);
     }
   };
-
-  // Show verification code input if needed
-  if (showVerificationCodeInput) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex flex-col justify-center">
-        <div className="sm:mx-auto sm:w-full sm:max-w-md mb-8">
-          <Link to="/" className="flex justify-center">
-            <h1 className="text-3xl font-bold text-brand-dark-800">
-              Churnex<span className="text-sm align-top">™</span>
-            </h1>
-          </Link>
-        </div>
-
-        <div className="sm:mx-auto sm:w-full sm:max-w-md">
-          <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
-            <div className="text-center mb-6">
-              <div className="flex justify-center mb-4">
-                <div className="h-12 w-12 rounded-full bg-brand-green-100 flex items-center justify-center">
-                  <MailCheck className="h-6 w-6 text-brand-green" />
-                </div>
-              </div>
-              <h2 className="text-2xl font-bold text-brand-dark-900">Verify your email</h2>
-            </div>
-            
-            <AuthStatusMessage />
-            
-            <VerificationCodeInput 
-              email={email} 
-              onVerificationSuccess={handleVerificationSuccess}
-              onResendCode={handleResendCode}
-            />
-            
-            <div className="mt-4 text-center">
-              <button 
-                onClick={() => {
-                  signOut();
-                  setShowVerificationCodeInput(false);
-                  setIsLogin(true);
-                }} 
-                className="text-sm text-brand-dark-500 hover:text-brand-dark-700"
-              >
-                Sign out
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   // Show email verification UI if user exists but email is not confirmed
   if (user && !emailConfirmed) {
@@ -260,18 +243,24 @@ const AuthFormContent = () => {
               </div>
               <h2 className="text-2xl font-bold text-brand-dark-900">Verify your email</h2>
               <p className="mt-2 text-sm text-brand-dark-500">
-                We've sent a verification code to <span className="font-medium">{user.email}</span>.
-                Please check your inbox and enter the verification code below.
+                We've sent a verification link to <span className="font-medium">{user.email}</span>.
+                Please check your inbox and click the link to verify your account.
               </p>
             </div>
             
             <AuthStatusMessage />
             
-            <VerificationCodeInput 
-              email={user.email!} 
-              onVerificationSuccess={handleVerificationSuccess}
-              onResendCode={handleResendCode}
-            />
+            <div className="mt-6">
+              <button
+                onClick={handleResendCode}
+                disabled={resendingCode}
+                className={`w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-brand-green hover:bg-brand-green-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-green ${
+                  resendingCode ? 'opacity-75 cursor-not-allowed' : ''
+                }`}
+              >
+                {resendingCode ? 'Sending...' : 'Resend verification link'}
+              </button>
+            </div>
             
             <div className="mt-4 text-center">
               <button 
@@ -287,6 +276,7 @@ const AuthFormContent = () => {
     );
   }
   
+  // Show the normal authentication form
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col justify-center">
       <div className="sm:mx-auto sm:w-full sm:max-w-md mb-8">
