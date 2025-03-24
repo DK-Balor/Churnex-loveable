@@ -27,7 +27,7 @@ export default defineConfig(({ mode }) => ({
     sourcemap: true,
   },
   optimizeDeps: {
-    exclude: [], // Remove tsconfig.node.json from here
+    exclude: [], // Removed tsconfig.node.json from the exclusions
     esbuildOptions: {
       // Fix for TypeScript configuration issues
       tsconfigRaw: {
