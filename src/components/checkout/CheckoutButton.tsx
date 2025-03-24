@@ -10,9 +10,16 @@ interface CheckoutButtonProps {
 }
 
 const CheckoutButton: React.FC<CheckoutButtonProps> = ({ onClick, disabled, isLoading, selectedPlan }) => {
+  const handleClick = () => {
+    console.log('Checkout button clicked with plan:', selectedPlan);
+    console.log('Button state:', { disabled, isLoading });
+    
+    onClick();
+  };
+  
   return (
     <button
-      onClick={onClick}
+      onClick={handleClick}
       disabled={disabled || isLoading}
       className={`w-full py-4 rounded-md font-bold text-lg transition-colors flex items-center justify-center ${
         isLoading || disabled

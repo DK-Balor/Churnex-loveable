@@ -140,6 +140,9 @@ export const useCheckoutProcess = () => {
     
     try {
       console.log('Creating checkout session for plan:', selectedPlan);
+      console.log('User ID:', user.id);
+      console.log('User email:', user.email);
+      
       const { url } = await createCheckoutSession(selectedPlan);
       
       if (url) {
@@ -147,10 +150,28 @@ export const useCheckoutProcess = () => {
         // Redirect to Stripe Checkout
         window.location.href = url;
       } else {
+        console.error('No checkout URL returned from createCheckoutSession');
         throw new CheckoutError('No checkout URL returned', 'no_checkout_url');
       }
     } catch (error) {
       console.error('Error creating checkout session:', error);
+      
+      // Log detailed error information
+      if (error instanceof CheckoutError) {
+        console.error('CheckoutError details:', {
+          message: error.message,
+          code: error.code,
+          stack: error.stack
+        });
+      } else if (error instanceof Error) {
+        console.error('Error details:', {
+          name: error.name,
+          message: error.message,
+          stack: error.stack
+        });
+      } else {
+        console.error('Unknown error type:', error);
+      }
       
       let errorMessage = 'Failed to create checkout session. Please try again.';
       
