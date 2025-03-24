@@ -19,7 +19,7 @@ const CheckoutButton: React.FC<CheckoutButtonProps> = ({ onClick, disabled, isLo
       className={`w-full py-4 rounded-md font-bold text-lg transition-colors flex items-center justify-center ${
         isLoading || disabled
           ? 'bg-gray-300 cursor-not-allowed text-gray-500'
-          : 'bg-brand-green text-white hover:bg-brand-green-600'
+          : 'bg-brand-green text-white hover:bg-brand-green-600 shadow-md hover:shadow-lg'
       }`}
     >
       {isLoading ? (

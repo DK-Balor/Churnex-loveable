@@ -1,4 +1,6 @@
+
 import { supabase } from '../integrations/supabase/client';
+import { useToast } from '../components/ui/use-toast';
 
 // Function to get the Stripe subscription plans
 export const getSubscriptionPlans = async () => {
@@ -83,10 +85,10 @@ export const getCurrentSubscription = async (userId: string) => {
     if (error) throw error;
 
     return {
-      status: profile?.subscription_plan ? 'active' : 'inactive',
+      status: profile?.subscription_status || (profile?.subscription_plan ? 'active' : 'inactive'),
       plan: profile?.subscription_plan || 'free', // Default to free plan if none is set
       currentPeriodEnd: profile?.trial_ends_at || new Date().toISOString(),
-      isCanceled: false,
+      isCanceled: profile?.subscription_status === 'canceled',
       isTrialing: profile?.trial_ends_at && new Date(profile.trial_ends_at) > new Date()
     };
   } catch (error) {
@@ -113,7 +115,15 @@ export const createCheckoutSession = async (priceId: string) => {
       }
     });
 
-    if (error) throw error;
+    if (error) {
+      console.error('Function error:', error);
+      throw new Error(`Failed to create checkout session: ${error.message}`);
+    }
+    
+    if (!data || !data.url) {
+      throw new Error('No checkout URL returned from server');
+    }
+    
     return data;
   } catch (error) {
     console.error('Error creating checkout session:', error);
@@ -128,15 +138,16 @@ export const handleCheckoutSuccess = async (sessionId: string, userId: string) =
     // This function now mainly checks the current subscription status
     const { data: profile, error } = await supabase
       .from('user_metadata')
-      .select('subscription_plan')
+      .select('subscription_plan, subscription_status')
       .eq('id', userId)
       .single();
     
     if (error) throw error;
     
     return { 
-      success: !!profile?.subscription_plan,
-      plan: profile?.subscription_plan || 'free'
+      success: !!profile?.subscription_plan && profile?.subscription_plan !== 'free',
+      plan: profile?.subscription_plan || 'free',
+      status: profile?.subscription_status || 'inactive'
     };
   } catch (error) {
     console.error('Error verifying checkout:', error);
@@ -189,7 +200,8 @@ export const activateFreePlan = async (userId: string) => {
     const { error } = await supabase
       .from('user_metadata')
       .update({
-        subscription_plan: 'free'
+        subscription_plan: 'free',
+        subscription_status: 'active'
       })
       .eq('id', userId);
     
@@ -198,7 +210,7 @@ export const activateFreePlan = async (userId: string) => {
       throw error;
     }
     
-    return { success: true, plan: 'free' };
+    return { success: true, plan: 'free', status: 'active' };
   } catch (error) {
     console.error('Error activating free plan:', error);
     throw error;

@@ -136,6 +136,7 @@ export const useCheckoutProcess = () => {
             toast({
               title: "Free Plan Activated",
               description: "You've successfully activated the free plan.",
+              variant: "success"
             });
             
             navigate('/dashboard');
@@ -147,6 +148,8 @@ export const useCheckoutProcess = () => {
             description: "There was a problem activating the free plan. Please try again.",
             variant: "destructive",
           });
+        } finally {
+          setIsLoading(false);
         }
         return;
       }
@@ -161,17 +164,18 @@ export const useCheckoutProcess = () => {
         } else {
           throw new Error('No checkout URL returned');
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error('Error creating checkout session:', error);
-        setMessage({
-          type: 'error',
-          text: 'There was an error creating your checkout session. Please try again.'
-        });
         
         toast({
           title: "Checkout Error",
-          description: "Failed to create checkout session. Please try again.",
+          description: error.message || "Failed to create checkout session. Please try again.",
           variant: "destructive",
+        });
+        
+        setMessage({
+          type: 'error',
+          text: error.message || 'There was an error creating your checkout session. Please try again.'
         });
       }
     } finally {

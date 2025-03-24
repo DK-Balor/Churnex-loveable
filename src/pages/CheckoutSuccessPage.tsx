@@ -4,7 +4,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { handleCheckoutSuccess } from '../utils/stripe';
 import { useToast } from '../components/ui/use-toast';
-import { CheckCircle } from 'lucide-react';
+import { CheckCircle, ArrowLeft } from 'lucide-react';
 
 export default function CheckoutSuccessPage() {
   const [searchParams] = useSearchParams();
@@ -85,8 +85,9 @@ export default function CheckoutSuccessPage() {
           </div>
           <button
             onClick={() => navigate('/dashboard')}
-            className="bg-brand-dark-800 text-white px-6 py-3 rounded-md hover:bg-brand-dark-700"
+            className="flex items-center mx-auto px-6 py-3 bg-brand-dark-800 text-white rounded-md hover:bg-brand-dark-700"
           >
+            <ArrowLeft className="h-4 w-4 mr-2" />
             Return to Dashboard
           </button>
         </div>
@@ -110,7 +111,7 @@ export default function CheckoutSuccessPage() {
         
         <button
           onClick={() => navigate('/dashboard')}
-          className="bg-brand-green text-white px-6 py-3 rounded-md hover:bg-brand-green-600"
+          className="bg-brand-green text-white px-6 py-3 rounded-md hover:bg-brand-green-600 transition-colors shadow-md"
         >
           Go to Dashboard Now
         </button>

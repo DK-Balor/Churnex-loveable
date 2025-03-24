@@ -59,8 +59,9 @@ export default function DashboardLayout() {
             }`}
           >
             <div className="flex items-center justify-between h-16 px-4 border-b border-gray-200">
-              <h1 className="text-xl font-bold text-brand-dark-800">
-                Churnex<span className="text-xs align-top">™</span>
+              <h1 className="text-xl font-bold">
+                <span className="text-brand-dark-900">Churnex</span>
+                <span className="text-brand-green text-xs align-top">™</span>
               </h1>
               <button
                 className="p-1 rounded-md hover:bg-gray-100"
@@ -119,8 +120,9 @@ export default function DashboardLayout() {
       <div className="hidden lg:flex lg:flex-col lg:w-64 lg:fixed lg:inset-y-0 lg:border-r lg:border-gray-200 lg:bg-white">
         <div className="flex-1 flex flex-col min-h-0">
           <div className="flex items-center h-16 flex-shrink-0 px-4 border-b border-gray-200">
-            <h1 className="text-xl font-bold text-brand-dark-800">
-              Churnex<span className="text-xs align-top">™</span>
+            <h1 className="text-xl font-bold">
+              <span className="text-brand-dark-900">Churnex</span>
+              <span className="text-brand-green text-xs align-top">™</span>
             </h1>
           </div>
           <div className="flex-1 flex flex-col pt-5 pb-4 overflow-y-auto">

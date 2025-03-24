@@ -13,6 +13,83 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
+// Define product info
+const productConfig = {
+  growth: {
+    name: "Growth Plan",
+    description: "Up to 500 subscribers with basic recovery and churn prediction",
+    features: ["Up to 500 subscribers", "Basic recovery", "Churn prediction", "Email notifications", "Standard support"],
+    price: 5900, // $59 in cents
+  },
+  scale: {
+    name: "Scale Plan",
+    description: "Up to 2,000 subscribers with advanced recovery and AI churn prevention",
+    features: ["Up to 2,000 subscribers", "Advanced recovery", "AI churn prevention", "Win-back campaigns", "Priority support"],
+    price: 11900, // $119 in cents
+  },
+  pro: {
+    name: "Pro Plan",
+    description: "Unlimited subscribers with enterprise features and dedicated support",
+    features: ["Unlimited subscribers", "Enterprise features", "Custom retention workflows", "Dedicated account manager", "24/7 premium support"],
+    price: 24900, // $249 in cents
+  }
+};
+
+// Function to ensure products and prices exist
+async function ensureProductsAndPrices() {
+  console.log("Ensuring products and prices exist...");
+  
+  try {
+    // For each product config
+    for (const [planId, config] of Object.entries(productConfig)) {
+      const priceId = `price_${planId}`;
+      
+      // Check if price already exists
+      const existingPrices = await stripe.prices.list({
+        lookup_keys: [priceId],
+        limit: 1,
+      });
+      
+      if (existingPrices.data.length > 0) {
+        console.log(`Price ${priceId} already exists, skipping creation`);
+        continue;
+      }
+      
+      // Create product
+      console.log(`Creating product for ${planId} plan...`);
+      const product = await stripe.products.create({
+        name: config.name,
+        description: config.description,
+        metadata: {
+          features: JSON.stringify(config.features),
+        },
+      });
+      
+      // Create price
+      console.log(`Creating price for ${planId} plan...`);
+      await stripe.prices.create({
+        product: product.id,
+        unit_amount: config.price,
+        currency: 'usd',
+        recurring: {
+          interval: 'month',
+        },
+        lookup_key: priceId,
+        metadata: {
+          plan_id: planId,
+        },
+      });
+      
+      console.log(`Successfully created product and price for ${planId} plan`);
+    }
+    
+    return true;
+  } catch (error) {
+    console.error("Error ensuring products and prices:", error);
+    return false;
+  }
+}
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
@@ -40,6 +117,14 @@ serve(async (req) => {
     // Get the request body
     const { priceId, successUrl, cancelUrl } = await req.json();
 
+    // Make sure the requested priceId is valid
+    if (!priceId.startsWith('price_') && priceId !== 'free') {
+      throw new Error(`Invalid price ID: ${priceId}`);
+    }
+
+    // Ensure all products and prices exist
+    await ensureProductsAndPrices();
+
     // Get user metadata to include their business name in Stripe
     const { data: userMetadata, error: metadataError } = await supabaseClient
       .from("user_metadata")
@@ -52,6 +137,29 @@ serve(async (req) => {
     }
 
     const businessName = userMetadata?.business_name || "Customer";
+
+    // Look for existing customer
+    let customerId;
+    const customerSearch = await stripe.customers.list({
+      email: user.email,
+      limit: 1,
+    });
+
+    if (customerSearch.data.length > 0) {
+      customerId = customerSearch.data[0].id;
+      console.log(`Found existing customer: ${customerId}`);
+    } else {
+      // Create a new customer if one doesn't exist
+      const newCustomer = await stripe.customers.create({
+        email: user.email,
+        name: businessName,
+        metadata: {
+          user_id: user.id,
+        },
+      });
+      customerId = newCustomer.id;
+      console.log(`Created new customer: ${customerId}`);
+    }
 
     // Create a Stripe checkout session with a trial period
     const session = await stripe.checkout.sessions.create({
@@ -68,7 +176,7 @@ serve(async (req) => {
       },
       success_url: successUrl || `${req.headers.get("origin")}/checkout-success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: cancelUrl || `${req.headers.get("origin")}/checkout?canceled=true`,
-      customer_email: user.email,
+      customer: customerId,
       client_reference_id: user.id,
       metadata: {
         user_id: user.id,

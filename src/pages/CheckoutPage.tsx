@@ -5,8 +5,11 @@ import PlanSelector from '../components/checkout/PlanSelector';
 import CheckoutButton from '../components/checkout/CheckoutButton';
 import CheckoutFooter from '../components/checkout/CheckoutFooter';
 import { useCheckoutProcess } from '../hooks/useCheckoutProcess';
+import { ArrowLeft } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 export default function CheckoutPage() {
+  const navigate = useNavigate();
   const {
     plans,
     selectedPlan,
@@ -23,7 +26,21 @@ export default function CheckoutPage() {
 
   return (
     <div className="max-w-5xl mx-auto p-8">
-      <h1 className="text-3xl font-bold text-brand-dark-900 mb-8 text-center">Choose Your Plan</h1>
+      <div className="mb-10 flex items-center justify-between">
+        <h1 className="text-3xl font-bold text-brand-dark-900">Choose Your Plan</h1>
+        <button 
+          onClick={() => navigate('/dashboard')}
+          className="flex items-center text-gray-600 hover:text-gray-800"
+        >
+          <ArrowLeft className="h-4 w-4 mr-1" />
+          Back to Dashboard
+        </button>
+      </div>
+      
+      <div className="mb-6 text-center">
+        <h2 className="text-xl text-brand-dark-700 mb-2">All plans include a 7-day free trial</h2>
+        <p className="text-gray-500">Cancel anytime. No credit card required for free plan.</p>
+      </div>
       
       <PlanSelector
         plans={plans}

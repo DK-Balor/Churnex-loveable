@@ -51,6 +51,8 @@ serve(async (req) => {
       );
     }
 
+    console.log(`Received webhook event: ${event.type}`);
+
     // Handle the event
     switch (event.type) {
       case 'checkout.session.completed': {
@@ -58,18 +60,26 @@ serve(async (req) => {
         const userId = session.client_reference_id;
         const subscriptionId = session.subscription;
 
+        console.log(`Processing checkout completion for user ${userId}`);
+
         if (userId && subscriptionId) {
           // Get subscription details
           const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+          
+          // Get the price ID from the subscription
           const priceId = subscription.items.data[0].price.id;
           
-          // Map price ID to plan name
-          let plan = null;
-          if (priceId === 'price_growth') plan = 'growth';
-          if (priceId === 'price_scale') plan = 'scale';
-          if (priceId === 'price_pro') plan = 'pro';
+          // Check the price lookup_key to determine the plan
+          const price = await stripe.prices.retrieve(priceId);
+          const planId = price.metadata?.plan_id || price.lookup_key?.replace('price_', '') || null;
           
-          if (plan) {
+          // Map to a plan name
+          let plan = 'free';
+          if (planId === 'growth') plan = 'growth';
+          if (planId === 'scale') plan = 'scale';
+          if (planId === 'pro') plan = 'pro';
+          
+          if (plan !== 'free') {
             // Check if subscription is in trial period
             const isTrialing = subscription.status === 'trialing';
             const trialEndDate = isTrialing ? new Date(subscription.trial_end * 1000) : null;
@@ -79,6 +89,7 @@ serve(async (req) => {
               .from('user_metadata')
               .update({
                 subscription_plan: plan,
+                subscription_status: subscription.status,
                 stripe_customer_id: session.customer,
                 stripe_subscription_id: subscriptionId,
                 trial_ends_at: isTrialing ? trialEndDate.toISOString() : null
@@ -88,6 +99,67 @@ serve(async (req) => {
             if (error) {
               console.error('Error updating subscription:', error);
               throw error;
+            } else {
+              console.log(`Successfully updated subscription for user ${userId} to plan ${plan}`);
+            }
+          }
+        }
+        break;
+      }
+      
+      case 'invoice.payment_succeeded': {
+        const invoice = event.data.object;
+        const subscriptionId = invoice.subscription;
+        const customerId = invoice.customer;
+        
+        if (subscriptionId) {
+          // Get the customer metadata to find the user ID
+          const customer = await stripe.customers.retrieve(customerId);
+          const userId = customer.metadata?.user_id;
+          
+          if (userId) {
+            // Update the payment status
+            const { error } = await supabaseClient
+              .from('user_metadata')
+              .update({
+                last_payment_status: 'succeeded',
+                last_payment_date: new Date().toISOString()
+              })
+              .eq('id', userId);
+            
+            if (error) {
+              console.error('Error updating payment status:', error);
+            } else {
+              console.log(`Payment succeeded for user ${userId}`);
+            }
+          }
+        }
+        break;
+      }
+      
+      case 'invoice.payment_failed': {
+        const invoice = event.data.object;
+        const subscriptionId = invoice.subscription;
+        const customerId = invoice.customer;
+        
+        if (subscriptionId) {
+          // Get the customer metadata to find the user ID
+          const customer = await stripe.customers.retrieve(customerId);
+          const userId = customer.metadata?.user_id;
+          
+          if (userId) {
+            // Update the payment status
+            const { error } = await supabaseClient
+              .from('user_metadata')
+              .update({
+                last_payment_status: 'failed',
+              })
+              .eq('id', userId);
+            
+            if (error) {
+              console.error('Error updating payment status:', error);
+            } else {
+              console.log(`Payment failed for user ${userId}`);
             }
           }
         }
@@ -112,7 +184,7 @@ serve(async (req) => {
         
         const userId = data.id;
         
-        // Check if subscription is in trial
+        // Check subscription status
         const isTrialing = subscription.status === 'trialing';
         const trialEndDate = isTrialing ? new Date(subscription.trial_end * 1000) : null;
         
@@ -120,10 +192,12 @@ serve(async (req) => {
         await supabaseClient
           .from('user_metadata')
           .update({
+            subscription_status: subscription.status,
             trial_ends_at: isTrialing ? trialEndDate.toISOString() : null
           })
           .eq('id', userId);
         
+        console.log(`Updated subscription status to ${subscription.status} for user ${userId}`);
         break;
       }
       
@@ -149,11 +223,13 @@ serve(async (req) => {
         await supabaseClient
           .from('user_metadata')
           .update({
-            subscription_plan: 'free', // Downgrade to free plan when canceled
+            subscription_plan: 'free',
+            subscription_status: 'canceled',
             trial_ends_at: null
           })
           .eq('id', userId);
         
+        console.log(`Subscription canceled for user ${userId}`);
         break;
       }
 
