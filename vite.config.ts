@@ -28,17 +28,5 @@ export default defineConfig(({ mode }) => ({
   },
   optimizeDeps: {
     exclude: [],
-    esbuildOptions: {
-      // Fix for TypeScript configuration issues
-      tsconfigRaw: {
-        compilerOptions: {
-          experimentalDecorators: true,
-          importsNotUsedAsValues: 'remove',
-          target: 'es2020',
-          skipLibCheck: true,
-          isolatedModules: true
-        }
-      }
-    }
   }
 }));
