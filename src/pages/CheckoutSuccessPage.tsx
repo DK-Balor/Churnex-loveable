@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { handleCheckoutSuccess } from '../utils/stripe';
+import { handleCheckoutSuccess, CheckoutError } from '../utils/stripe';
 import { useToast } from '../components/ui/use-toast';
 import { CheckCircle, ArrowLeft, AlertCircle } from 'lucide-react';
 
@@ -75,9 +75,17 @@ export default function CheckoutSuccessPage() {
             success: result.success
           });
         }
-      } catch (error: any) {
+      } catch (error) {
         console.error('Error processing checkout:', error);
-        setError(error.message || 'There was an error processing your subscription. Please try again or contact support.');
+        
+        let errorMessage = 'There was an error processing your subscription. Please try again or contact support.';
+        
+        // Extract more specific error messages from CheckoutError
+        if (error instanceof CheckoutError) {
+          errorMessage = error.message;
+        }
+        
+        setError(errorMessage);
         
         toast({
           title: "Checkout error",

@@ -69,6 +69,15 @@ const invokeEdgeFunction = async <T>(functionName: string, payload: any): Promis
     
     console.log(`${functionName} response status:`, status);
     
+    // Check for non-2xx response status
+    if (status < 200 || status >= 300) {
+      console.error(`${functionName} returned non-2xx status:`, status);
+      throw new CheckoutError(
+        `Error invoking ${functionName}: Server returned ${status} status`, 
+        'edge_function_status_error'
+      );
+    }
+    
     if (error) {
       console.error(`${functionName} function error:`, error);
       throw new CheckoutError(
@@ -155,16 +164,31 @@ export const createCheckoutSession = async (priceId: string): Promise<CheckoutSe
 const fetchUserProfile = async (userId: string) => {
   console.log('Fetching user profile for ID:', userId);
   
+  if (!userId) {
+    throw new CheckoutError('User ID is required', 'missing_user_id');
+  }
+  
   try {
-    const { data: profile, error } = await supabase
+    const { data: profile, error, status } = await supabase
       .from('user_metadata')
       .select('subscription_plan, subscription_status, account_type, stripe_subscription_id, stripe_customer_id, subscription_current_period_end, trial_ends_at')
       .eq('id', userId)
-      .single();
+      .maybeSingle();
+    
+    // Check for non-2xx response status
+    if (status < 200 || status >= 300) {
+      console.error(`Profile fetch returned non-2xx status:`, status);
+      throw new CheckoutError(`Failed to fetch user profile: Server returned ${status} status`, 'profile_fetch_status_error');
+    }
     
     if (error) {
       console.error('Error fetching user profile:', error);
       throw new CheckoutError(`Failed to fetch user profile: ${error.message}`, 'profile_fetch_error');
+    }
+    
+    if (!profile) {
+      console.warn('User profile not found, returning empty object');
+      return {};
     }
     
     console.log('User profile data retrieved:', profile);
@@ -231,6 +255,9 @@ export const handleCheckoutSuccess = async (sessionId: string, userId: string): 
     
     // Analyze subscription status
     const { isActive, isTrial, accountType, isPaid } = analyzeSubscriptionStatus(profile);
+    
+    // For complete verification, we could also validate the session with Stripe directly
+    // But we'll rely on our database state for now
     
     return { 
       success: isActive || isPaid,

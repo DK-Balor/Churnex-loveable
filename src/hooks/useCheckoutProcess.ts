@@ -6,7 +6,8 @@ import { useToast } from '../components/ui/use-toast';
 import { 
   getSubscriptionPlans, 
   createCheckoutSession, 
-  handleCheckoutSuccess
+  handleCheckoutSuccess,
+  CheckoutError
 } from '../utils/stripe';
 
 export interface CheckoutMessage {
@@ -68,14 +69,16 @@ export const useCheckoutProcess = () => {
         try {
           const result = await handleCheckoutSuccess(sessionId, user.id);
           if (result.success) {
+            const planName = result.plan ? result.plan.charAt(0).toUpperCase() + result.plan.slice(1) : '';
+            
             setMessage({
               type: 'success',
-              text: `Successfully subscribed to the ${result.plan ? result.plan.charAt(0).toUpperCase() + result.plan.slice(1) : ''} plan! Redirecting to dashboard...`
+              text: `Successfully subscribed to the ${planName} plan! Redirecting to dashboard...`
             });
             
             toast({
               title: "Subscription activated",
-              description: `You have successfully subscribed to the ${result.plan ? result.plan.charAt(0).toUpperCase() + result.plan.slice(1) : ''} plan.`,
+              description: `You have successfully subscribed to the ${planName} plan.`,
               variant: "success",
             });
             
@@ -89,11 +92,19 @@ export const useCheckoutProcess = () => {
               text: 'Subscription was not found. Please contact support if you believe this is an error.'
             });
           }
-        } catch (error: any) {
+        } catch (error) {
           console.error('Error processing checkout:', error);
+          
+          let errorMessage = 'There was an error processing your subscription. Please try again or contact support.';
+          
+          // Extract more specific error messages from CheckoutError
+          if (error instanceof CheckoutError) {
+            errorMessage = error.message;
+          }
+          
           setMessage({
             type: 'error',
-            text: error.message || 'There was an error processing your subscription. Please try again or contact support.'
+            text: errorMessage
           });
           
           toast({
@@ -136,20 +147,27 @@ export const useCheckoutProcess = () => {
         // Redirect to Stripe Checkout
         window.location.href = url;
       } else {
-        throw new Error('No checkout URL returned');
+        throw new CheckoutError('No checkout URL returned', 'no_checkout_url');
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error('Error creating checkout session:', error);
+      
+      let errorMessage = 'Failed to create checkout session. Please try again.';
+      
+      // Extract more specific error messages from CheckoutError
+      if (error instanceof CheckoutError) {
+        errorMessage = error.message;
+      }
       
       toast({
         title: "Checkout Error",
-        description: error.message || "Failed to create checkout session. Please try again.",
+        description: errorMessage,
         variant: "destructive",
       });
       
       setMessage({
         type: 'error',
-        text: error.message || 'There was an error creating your checkout session. Please try again.'
+        text: errorMessage
       });
     } finally {
       setIsLoading(false);
