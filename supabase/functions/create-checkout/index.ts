@@ -3,10 +3,33 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.4";
 import Stripe from "https://esm.sh/stripe@12.5.0";
 
+// CORS headers for all responses
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
     "authorization, x-client-info, apikey, content-type",
+};
+
+// Configure available plans
+const productConfig = {
+  growth: {
+    name: "Growth Plan",
+    description: "Up to 500 subscribers with basic recovery and churn prediction",
+    features: ["Up to 500 subscribers", "Basic recovery", "Churn prediction", "Email notifications", "Standard support"],
+    price: 4900, // £49 in pence
+  },
+  scale: {
+    name: "Scale Plan",
+    description: "Up to 2,000 subscribers with advanced recovery and AI churn prevention",
+    features: ["Up to 2,000 subscribers", "Advanced recovery", "AI churn prevention", "Win-back campaigns", "Priority support"],
+    price: 9900, // £99 in pence
+  },
+  pro: {
+    name: "Pro Plan",
+    description: "Unlimited subscribers with enterprise features and dedicated support",
+    features: ["Unlimited subscribers", "Enterprise features", "Custom retention workflows", "Dedicated account manager", "24/7 premium support"],
+    price: 19900, // £199 in pence
+  }
 };
 
 serve(async (req) => {
@@ -18,34 +41,49 @@ serve(async (req) => {
   try {
     console.log("Starting checkout session creation process");
     
-    // Initialize Stripe with your secret key
+    // Initialize Stripe with the secret key
     const stripeSecretKey = Deno.env.get("STRIPE_SECRET_KEY");
     if (!stripeSecretKey) {
       console.error("Stripe secret key not found in environment variables");
-      throw new Error("Stripe configuration error");
+      return new Response(
+        JSON.stringify({ error: "Stripe configuration error - Missing API key" }),
+        {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
     }
     
-    const stripe = new Stripe(stripeSecretKey);
-    console.log("Stripe initialized with API key");
+    // Log the first few characters of the key to verify it's loaded (but not the whole key for security)
+    console.log(`Stripe key loaded: ${stripeSecretKey.substring(0, 8)}...`);
     
-    // Get Supabase configuration
+    const stripe = new Stripe(stripeSecretKey);
+    console.log("Stripe initialized successfully");
+    
+    // Get the Supabase configuration
     const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
     
     if (!supabaseUrl || !supabaseKey) {
       console.error("Supabase configuration missing");
-      throw new Error("Supabase configuration error");
+      return new Response(
+        JSON.stringify({ error: "Server configuration error - Supabase credentials missing" }),
+        {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
     }
 
-    // Create a Supabase client with the Auth context of the logged in user
+    // Create a Supabase client
     const supabaseClient = createClient(supabaseUrl, supabaseKey);
 
-    // Get the authorization header from the request
+    // Get the authorization header and validate user
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
       console.error("No authorization header found");
       return new Response(
-        JSON.stringify({ error: "No authorization header" }),
+        JSON.stringify({ error: "Authentication required" }),
         {
           status: 401,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -53,14 +91,14 @@ serve(async (req) => {
       );
     }
 
-    // Get user information from the JWT token
+    // Get the JWT token and verify the user
     const token = authHeader.replace("Bearer ", "");
     const { data: { user }, error: userError } = await supabaseClient.auth.getUser(token);
 
     if (userError || !user) {
-      console.error("User auth error:", userError);
+      console.error("User authentication error:", userError);
       return new Response(
-        JSON.stringify({ error: "Invalid user token" }),
+        JSON.stringify({ error: "Invalid or expired authentication token" }),
         {
           status: 401,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -68,16 +106,16 @@ serve(async (req) => {
       );
     }
 
-    console.log("User authenticated:", user.id);
+    console.log(`User authenticated: ${user.id} (${user.email})`);
 
-    // Get the request body
+    // Parse the request body
     let requestBody;
     try {
       requestBody = await req.json();
     } catch (error) {
       console.error("Error parsing request body:", error);
       return new Response(
-        JSON.stringify({ error: "Invalid request body" }),
+        JSON.stringify({ error: "Invalid request format" }),
         {
           status: 400,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -85,12 +123,16 @@ serve(async (req) => {
       );
     }
 
+    // Extract request parameters
     const { priceId, successUrl, cancelUrl, isTestMode } = requestBody;
-    console.log(`Received checkout request for priceId: ${priceId}, isTestMode: ${isTestMode}`);
+    
+    console.log(`Request parameters: priceId=${priceId}, isTestMode=${isTestMode}`);
+    console.log(`Success URL: ${successUrl}`);
+    console.log(`Cancel URL: ${cancelUrl}`);
 
-    // Make sure we have a valid priceId format
+    // Validate priceId
     if (!priceId) {
-      console.error("Missing priceId parameter");
+      console.error("Missing priceId in request body");
       return new Response(
         JSON.stringify({ error: "Missing priceId parameter" }),
         {
@@ -99,28 +141,6 @@ serve(async (req) => {
         }
       );
     }
-
-    // Define product info
-    const productConfig = {
-      growth: {
-        name: "Growth Plan",
-        description: "Up to 500 subscribers with basic recovery and churn prediction",
-        features: ["Up to 500 subscribers", "Basic recovery", "Churn prediction", "Email notifications", "Standard support"],
-        price: 4900, // £49 in pence
-      },
-      scale: {
-        name: "Scale Plan",
-        description: "Up to 2,000 subscribers with advanced recovery and AI churn prevention",
-        features: ["Up to 2,000 subscribers", "Advanced recovery", "AI churn prevention", "Win-back campaigns", "Priority support"],
-        price: 9900, // £99 in pence
-      },
-      pro: {
-        name: "Pro Plan",
-        description: "Unlimited subscribers with enterprise features and dedicated support",
-        features: ["Unlimited subscribers", "Enterprise features", "Custom retention workflows", "Dedicated account manager", "24/7 premium support"],
-        price: 19900, // £199 in pence
-      }
-    };
 
     // Extract the plan name from the priceId (e.g., "price_growth" -> "growth")
     const planName = priceId.replace('price_', '');
@@ -137,26 +157,43 @@ serve(async (req) => {
       );
     }
 
-    // Ensure products and prices exist in Stripe
+    // Get user metadata to include business name in Stripe
+    const { data: userMetadata, error: metadataError } = await supabaseClient
+      .from("user_metadata")
+      .select("business_name, full_name")
+      .eq("id", user.id)
+      .single();
+
+    if (metadataError) {
+      console.error("Error fetching user metadata:", metadataError);
+      // Continue without metadata, not a critical error
+    }
+
+    const businessName = userMetadata?.business_name || "Customer";
+    const fullName = userMetadata?.full_name || user.email;
+    
+    console.log(`Business: ${businessName}, User: ${fullName}`);
+
+    // Find an existing Stripe price or create a new one
+    let priceToUse;
     try {
-      console.log("Ensuring products and prices exist...");
+      console.log(`Checking for existing price with lookup key: ${priceId}`);
       
-      // Check if price already exists
-      console.log(`Checking if price with lookup key ${priceId} exists...`);
+      // Look for an existing price with this lookup key
       const existingPrices = await stripe.prices.list({
         lookup_keys: [priceId],
         limit: 1,
         active: true,
       });
       
-      let priceToUse;
-      
       if (existingPrices.data.length > 0) {
-        console.log(`Price with lookup key ${priceId} already exists, using it`);
+        // Use the existing price
         priceToUse = existingPrices.data[0].id;
+        console.log(`Found existing price: ${priceToUse}`);
       } else {
-        console.log(`Creating product for ${planName} plan...`);
-        // Create product
+        console.log(`No existing price found. Creating new product and price for ${planName}`);
+        
+        // Create a new product
         const product = await stripe.products.create({
           name: productConfig[planName].name,
           description: productConfig[planName].description,
@@ -166,8 +203,9 @@ serve(async (req) => {
           },
         });
         
-        // Create price
-        console.log(`Creating price for ${planName} plan with lookup key ${priceId}...`);
+        console.log(`Created product: ${product.id}`);
+        
+        // Create a new price for the product
         const price = await stripe.prices.create({
           product: product.id,
           unit_amount: productConfig[planName].price,
@@ -182,47 +220,81 @@ serve(async (req) => {
         });
         
         priceToUse = price.id;
-        console.log(`Successfully created product and price for ${planName} plan`);
+        console.log(`Created price: ${priceToUse}`);
       }
+    } catch (error) {
+      console.error("Error ensuring Stripe product and price exist:", error);
+      return new Response(
+        JSON.stringify({ 
+          error: "Error creating Stripe product or price", 
+          details: error.message 
+        }),
+        {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
 
-      // Get user metadata to include their business name in Stripe
-      const { data: userMetadata, error: metadataError } = await supabaseClient
-        .from("user_metadata")
-        .select("*")
-        .eq("id", user.id)
-        .single();
-
-      if (metadataError) {
-        console.error("Error fetching user metadata:", metadataError);
-      }
-
-      const businessName = userMetadata?.business_name || "Customer";
-
-      // Look for existing customer
-      let customerId;
+    // Find or create a customer in Stripe
+    let customerId;
+    try {
+      // Look for existing customer with this email
       const customerSearch = await stripe.customers.list({
         email: user.email,
         limit: 1,
       });
 
       if (customerSearch.data.length > 0) {
+        // Use the existing customer
         customerId = customerSearch.data[0].id;
         console.log(`Found existing customer: ${customerId}`);
-      } else {
-        // Create a new customer if one doesn't exist
-        const newCustomer = await stripe.customers.create({
-          email: user.email,
-          name: businessName,
+        
+        // Optionally update the customer with latest info
+        await stripe.customers.update(customerId, {
+          name: businessName || fullName,
           metadata: {
             user_id: user.id,
+            updated_at: new Date().toISOString()
+          },
+        });
+        console.log(`Updated customer information`);
+      } else {
+        // Create a new customer
+        const newCustomer = await stripe.customers.create({
+          email: user.email,
+          name: businessName || fullName,
+          metadata: {
+            user_id: user.id,
+            created_at: new Date().toISOString()
           },
         });
         customerId = newCustomer.id;
         console.log(`Created new customer: ${customerId}`);
       }
+    } catch (error) {
+      console.error("Error finding/creating Stripe customer:", error);
+      return new Response(
+        JSON.stringify({ 
+          error: "Error managing customer record", 
+          details: error.message 
+        }),
+        {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
 
-      // Create a Stripe checkout session with a trial period
+    // Create the checkout session
+    try {
       console.log("Creating checkout session...");
+      
+      // Prepare URLs with fallbacks
+      const successUrlToUse = successUrl || `${req.headers.get("origin")}/checkout-success?session_id={CHECKOUT_SESSION_ID}`;
+      const cancelUrlToUse = cancelUrl || `${req.headers.get("origin")}/checkout?cancelled=true`;
+      
+      // Create the session with a trial period
       const session = await stripe.checkout.sessions.create({
         payment_method_types: ["card"],
         line_items: [
@@ -233,21 +305,25 @@ serve(async (req) => {
         ],
         mode: "subscription",
         subscription_data: {
-          trial_period_days: 7, // Add a 7-day free trial
+          trial_period_days: 7, // 7-day free trial
         },
-        success_url: successUrl || `${req.headers.get("origin")}/checkout-success?session_id={CHECKOUT_SESSION_ID}`,
-        cancel_url: cancelUrl || `${req.headers.get("origin")}/checkout?cancelled=true`,
+        success_url: successUrlToUse,
+        cancel_url: cancelUrlToUse,
         customer: customerId,
         client_reference_id: user.id,
-        currency: 'gbp', // Set currency to GBP
+        currency: 'gbp',
         metadata: {
           user_id: user.id,
           business_name: businessName,
+          plan: planName,
           is_test_mode: isTestMode ? "true" : "false"
         },
       });
 
-      console.log(`Checkout session created successfully: ${session.id}`);
+      console.log(`Checkout session created: ${session.id}`);
+      console.log(`Checkout URL: ${session.url}`);
+      
+      // Return the session details to the client
       return new Response(
         JSON.stringify({
           sessionId: session.id,
@@ -259,13 +335,12 @@ serve(async (req) => {
         }
       );
     } catch (error) {
-      console.error("Error ensuring products and prices:", error);
-      // Provide detailed error for debugging
+      console.error("Error creating checkout session:", error);
       return new Response(
         JSON.stringify({ 
-          error: error.message || "Unknown error occurred during Stripe product setup",
-          details: error.stack,
-          statusCode: 500
+          error: "Error creating checkout session", 
+          details: error.message,
+          code: error.code || "unknown"
         }),
         {
           status: 500,
@@ -274,13 +349,13 @@ serve(async (req) => {
       );
     }
   } catch (error) {
-    console.error("Error in create-checkout function:", error);
+    // Catch-all error handler
+    console.error("Unhandled error in create-checkout function:", error);
     
     return new Response(
       JSON.stringify({ 
-        error: error.message || "Unknown error occurred",
-        details: error.stack,
-        statusCode: 500
+        error: "Unexpected error occurred", 
+        details: error.message
       }),
       {
         status: 500,

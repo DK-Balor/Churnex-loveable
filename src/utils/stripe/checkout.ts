@@ -1,44 +1,51 @@
 
 import { supabase } from '../../integrations/supabase/client';
 
-// Function to create a checkout session
+/**
+ * Creates a checkout session with Stripe through our Edge Function
+ * @param priceId The Stripe price ID to checkout with
+ * @returns The checkout session data with URL
+ */
 export const createCheckoutSession = async (priceId: string) => {
   try {
     console.log('Creating checkout session for price:', priceId);
     
-    // Make sure the priceId is in the expected format for the edge function
-    const formattedPriceId = priceId.startsWith('price_') ? priceId : `price_${priceId}`;
+    // Get the current origin for success and cancel URLs
+    const origin = window.location.origin;
     
-    // Call our Supabase Edge Function with improved logging
-    console.log('Calling create-checkout with:', { 
-      priceId: formattedPriceId,
-      isTestMode: true, // Explicitly tell the edge function we're in test mode
-      successUrl: window.location.origin + '/checkout-success?session_id={CHECKOUT_SESSION_ID}',
-      cancelUrl: window.location.origin + '/checkout?cancelled=true'
+    // Call our Supabase Edge Function with comprehensive logging
+    console.log('Calling create-checkout edge function with:', { 
+      priceId,
+      isTestMode: true,
+      successUrl: `${origin}/checkout-success?session_id={CHECKOUT_SESSION_ID}`,
+      cancelUrl: `${origin}/checkout?cancelled=true`
     });
     
     const { data, error, status } = await supabase.functions.invoke('create-checkout', {
       body: { 
-        priceId: formattedPriceId,
-        isTestMode: true, // Explicitly tell the edge function we're in test mode
-        successUrl: window.location.origin + '/checkout-success?session_id={CHECKOUT_SESSION_ID}',
-        cancelUrl: window.location.origin + '/checkout?cancelled=true'
+        priceId,
+        isTestMode: true, // Always use test mode for now
+        successUrl: `${origin}/checkout-success?session_id={CHECKOUT_SESSION_ID}`,
+        cancelUrl: `${origin}/checkout?cancelled=true`
       }
     });
     
     console.log('Edge function response status:', status);
+    console.log('Edge function response data:', data);
     
     if (error) {
-      console.error('Function error:', error);
+      console.error('Edge function error:', error);
       throw new Error(`Failed to create checkout session: ${error.message}`);
     }
     
     if (!data || !data.url) {
       console.error('No checkout URL returned:', data);
-      throw new Error(data?.error || 'No checkout URL returned from server');
+      const errorMessage = data?.error || 'No checkout URL returned from server';
+      console.error('Error message:', errorMessage);
+      throw new Error(errorMessage);
     }
     
-    console.log('Checkout session created successfully:', data);
+    console.log('Checkout session created successfully with URL:', data.url);
     return data;
   } catch (error) {
     console.error('Error creating checkout session:', error);
@@ -46,16 +53,20 @@ export const createCheckoutSession = async (priceId: string) => {
   }
 };
 
-// Function to handle successful checkout
+/**
+ * Handles a successful checkout by verifying subscription details
+ * @param sessionId The Stripe checkout session ID
+ * @param userId The user ID
+ * @returns Subscription verification result
+ */
 export const handleCheckoutSuccess = async (sessionId: string, userId: string) => {
   try {
-    console.log('Handling checkout success for session:', sessionId);
+    console.log('Handling checkout success for session:', sessionId, 'user:', userId);
     
-    // With Stripe webhooks, this is handled automatically by the backend
-    // This function now mainly checks the current subscription status
+    // Fetch the current user profile information
     const { data: profile, error } = await supabase
       .from('user_metadata')
-      .select('subscription_plan, subscription_status, account_type')
+      .select('subscription_plan, subscription_status, account_type, stripe_subscription_id, stripe_customer_id, subscription_current_period_end, trial_ends_at')
       .eq('id', userId)
       .single();
     
@@ -66,18 +77,35 @@ export const handleCheckoutSuccess = async (sessionId: string, userId: string) =
     
     console.log('User profile after checkout:', profile);
     
-    // Check if the subscription is active
-    const success = !!profile?.subscription_plan && 
-                   (profile?.subscription_status === 'active' || 
-                    profile?.subscription_status === 'trialing' ||
-                    profile?.account_type === 'trial' ||
-                    profile?.account_type === 'paid');
+    // Check if subscription is active
+    const isActive = !!profile?.subscription_plan && 
+                    ['active', 'trialing'].includes(profile?.subscription_status || '');
+    
+    const isTrial = !!profile?.trial_ends_at && 
+                   new Date(profile.trial_ends_at) > new Date();
+    
+    // Determine account type status
+    const accountType = profile?.account_type || 'demo';
+    const isPaid = accountType === 'paid' || accountType === 'trial';
+    
+    console.log('Subscription status check:', {
+      isActive,
+      isTrial,
+      accountType,
+      isPaid,
+      subscriptionStatus: profile?.subscription_status
+    });
     
     return { 
-      success: success,
+      success: isActive || isPaid,
       plan: profile?.subscription_plan || null,
       status: profile?.subscription_status || 'inactive',
-      accountType: profile?.account_type || 'demo'
+      accountType: accountType,
+      isTrial,
+      trialEndsAt: profile?.trial_ends_at || null,
+      subscriptionId: profile?.stripe_subscription_id || null,
+      customerId: profile?.stripe_customer_id || null,
+      currentPeriodEnd: profile?.subscription_current_period_end || null
     };
   } catch (error) {
     console.error('Error verifying checkout:', error);

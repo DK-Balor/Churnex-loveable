@@ -4,7 +4,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { handleCheckoutSuccess } from '../utils/stripe';
 import { useToast } from '../components/ui/use-toast';
-import { CheckCircle, ArrowLeft } from 'lucide-react';
+import { CheckCircle, ArrowLeft, AlertCircle } from 'lucide-react';
 
 export default function CheckoutSuccessPage() {
   const [searchParams] = useSearchParams();
@@ -14,6 +14,7 @@ export default function CheckoutSuccessPage() {
   const [isProcessing, setIsProcessing] = useState(true);
   const [plan, setPlan] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [subscriptionDetails, setSubscriptionDetails] = useState<any>(null);
 
   // Get the session ID from the URL
   const sessionId = searchParams.get('session_id');
@@ -22,12 +23,14 @@ export default function CheckoutSuccessPage() {
     // Process the checkout success
     const processCheckoutSuccess = async () => {
       if (!sessionId) {
+        console.error('Missing checkout session ID in URL parameters');
         setError('Missing checkout session ID. Please try again or contact support.');
         setIsProcessing(false);
         return;
       }
       
       if (!user) {
+        console.error('No authenticated user found');
         setError('User authentication required. Please log in and try again.');
         setIsProcessing(false);
         return;
@@ -36,14 +39,23 @@ export default function CheckoutSuccessPage() {
       try {
         console.log(`Processing checkout success for session ${sessionId} and user ${user.id}`);
         const result = await handleCheckoutSuccess(sessionId, user.id);
+        console.log('Checkout success result:', result);
+        
+        setSubscriptionDetails(result);
         
         if (result.success) {
           setPlan(result.plan);
-          console.log(`Subscription successfully activated: ${result.plan} plan, status: ${result.status}`);
+          
+          const planName = result.plan ? result.plan.charAt(0).toUpperCase() + result.plan.slice(1) : '';
+          const status = result.isTrial ? 'trial' : 'active';
+          
+          console.log(`Subscription ${status}: ${planName} plan (${result.status})`);
           
           toast({
-            title: "Subscription activated",
-            description: `You have successfully subscribed to the ${result.plan ? result.plan.charAt(0).toUpperCase() + result.plan.slice(1) : ''} plan.`,
+            title: result.isTrial ? "Trial Activated" : "Subscription Activated",
+            description: `You have successfully subscribed to the ${planName} plan. ${
+              result.isTrial ? 'Your free trial is now active.' : ''
+            }`,
             variant: "success"
           });
           
@@ -54,6 +66,14 @@ export default function CheckoutSuccessPage() {
         } else {
           console.error('Subscription verification failed:', result);
           setError('Your subscription could not be verified. Please contact support if you believe this is an error.');
+          
+          // Log detailed information for debugging
+          console.error('Subscription verification failed with details:', {
+            plan: result.plan,
+            status: result.status,
+            accountType: result.accountType,
+            success: result.success
+          });
         }
       } catch (error: any) {
         console.error('Error processing checkout:', error);
@@ -72,6 +92,26 @@ export default function CheckoutSuccessPage() {
     processCheckoutSuccess();
   }, [sessionId, user, navigate, toast]);
 
+  const renderSubscriptionDetails = () => {
+    if (!subscriptionDetails) return null;
+    
+    const trialInfo = subscriptionDetails.isTrial && subscriptionDetails.trialEndsAt ? (
+      <p className="text-brand-dark-600 mt-2">
+        Your free trial ends on {new Date(subscriptionDetails.trialEndsAt).toLocaleDateString()}.
+      </p>
+    ) : null;
+    
+    return (
+      <div className="mt-4 p-4 bg-gray-50 rounded-md">
+        <h3 className="font-semibold mb-2">Subscription Details</h3>
+        <p><span className="font-medium">Plan:</span> {subscriptionDetails.plan || 'None'}</p>
+        <p><span className="font-medium">Status:</span> {subscriptionDetails.status}</p>
+        <p><span className="font-medium">Account Type:</span> {subscriptionDetails.accountType}</p>
+        {trialInfo}
+      </div>
+    );
+  };
+
   if (isProcessing) {
     return (
       <div className="max-w-3xl mx-auto py-20 px-4">
@@ -89,8 +129,13 @@ export default function CheckoutSuccessPage() {
       <div className="max-w-3xl mx-auto py-20 px-4">
         <div className="text-center">
           <div className="bg-red-50 text-red-700 p-6 rounded-lg mb-8">
+            <AlertCircle className="h-12 w-12 mx-auto mb-4 text-red-500" />
             <h1 className="text-2xl font-bold mb-2">Something went wrong</h1>
-            <p>{error}</p>
+            <p className="mb-4">{error}</p>
+            <div className="text-sm text-red-600 p-3 bg-red-100 rounded mb-4">
+              <p>Debug Info: Session ID: {sessionId || 'Not provided'}</p>
+              <p>User ID: {user?.id || 'Not authenticated'}</p>
+            </div>
           </div>
           <button
             onClick={() => navigate('/dashboard')}
@@ -113,9 +158,11 @@ export default function CheckoutSuccessPage() {
           <p className="text-xl text-brand-dark-700 mb-2">
             Your {plan && plan.charAt(0).toUpperCase() + plan.slice(1)} plan is now active.
           </p>
-          <p className="text-brand-dark-600 mb-8">
+          <p className="text-brand-dark-600 mb-4">
             You'll be redirected to your dashboard in a few seconds...
           </p>
+          
+          {renderSubscriptionDetails()}
         </div>
         
         <button
