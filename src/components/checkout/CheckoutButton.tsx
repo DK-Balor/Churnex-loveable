@@ -10,8 +10,6 @@ interface CheckoutButtonProps {
 }
 
 const CheckoutButton: React.FC<CheckoutButtonProps> = ({ onClick, disabled, isLoading, selectedPlan }) => {
-  const isFree = selectedPlan === 'free';
-  
   return (
     <button
       onClick={onClick}
@@ -27,8 +25,6 @@ const CheckoutButton: React.FC<CheckoutButtonProps> = ({ onClick, disabled, isLo
           <Loader2 className="h-5 w-5 mr-2 animate-spin" />
           Processing...
         </>
-      ) : isFree ? (
-        'Activate Free Plan'
       ) : (
         'Continue to Checkout'
       )}

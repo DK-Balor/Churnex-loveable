@@ -33,14 +33,16 @@ export const useProfile = (user: User | null) => {
             const { data: authUser } = await supabase.auth.getUser();
             const userMetadata = authUser?.user?.user_metadata;
             
-            // Create profile with data from auth metadata
+            // Create profile with data from auth metadata - no subscription by default (read-only mode)
             const { data: newProfile, error: createError } = await supabase
               .from('user_metadata')
               .insert([{ 
                 id: user.id,
                 full_name: userMetadata?.full_name || null,
                 business_name: userMetadata?.business_name || null,
-                trial_ends_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString() // 7-day trial
+                subscription_plan: null,
+                subscription_status: 'inactive',
+                trial_ends_at: null
               }])
               .select('*')
               .single();

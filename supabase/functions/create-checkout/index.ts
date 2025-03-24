@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.4";
 import Stripe from "https://esm.sh/stripe@12.5.0";
@@ -19,19 +18,19 @@ const productConfig = {
     name: "Growth Plan",
     description: "Up to 500 subscribers with basic recovery and churn prediction",
     features: ["Up to 500 subscribers", "Basic recovery", "Churn prediction", "Email notifications", "Standard support"],
-    price: 5900, // $59 in cents
+    price: 4900, // £49 in pence
   },
   scale: {
     name: "Scale Plan",
     description: "Up to 2,000 subscribers with advanced recovery and AI churn prevention",
     features: ["Up to 2,000 subscribers", "Advanced recovery", "AI churn prevention", "Win-back campaigns", "Priority support"],
-    price: 11900, // $119 in cents
+    price: 9900, // £99 in pence
   },
   pro: {
     name: "Pro Plan",
     description: "Unlimited subscribers with enterprise features and dedicated support",
     features: ["Unlimited subscribers", "Enterprise features", "Custom retention workflows", "Dedicated account manager", "24/7 premium support"],
-    price: 24900, // $249 in cents
+    price: 19900, // £199 in pence
   }
 };
 
@@ -70,7 +69,7 @@ async function ensureProductsAndPrices() {
       await stripe.prices.create({
         product: product.id,
         unit_amount: config.price,
-        currency: 'usd',
+        currency: 'gbp',
         recurring: {
           interval: 'month',
         },
@@ -175,9 +174,10 @@ serve(async (req) => {
         trial_period_days: 7, // Add a 7-day free trial
       },
       success_url: successUrl || `${req.headers.get("origin")}/checkout-success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: cancelUrl || `${req.headers.get("origin")}/checkout?canceled=true`,
+      cancel_url: cancelUrl || `${req.headers.get("origin")}/checkout?cancelled=true`, // UK spelling
       customer: customerId,
       client_reference_id: user.id,
+      currency: 'gbp', // Set currency to GBP
       metadata: {
         user_id: user.id,
         business_name: businessName

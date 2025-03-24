@@ -5,7 +5,7 @@ import { useAuth } from '../contexts/AuthContext';
 
 export default function DashboardPage() {
   const { profile } = useAuth();
-  const isNewUser = !profile?.subscription_plan;
+  const isSubscribed = profile?.subscription_plan && profile?.subscription_status === 'active';
   
   return (
     <div>
@@ -18,11 +18,11 @@ export default function DashboardPage() {
         </p>
       </div>
       
-      {isNewUser && (
+      {!isSubscribed && (
         <div className="bg-blue-50 border border-blue-200 p-4 rounded-lg mb-6">
           <h2 className="font-medium text-blue-800 mb-2">Welcome to Churnex!</h2>
           <p className="text-blue-700 text-sm mb-3">
-            You're currently on our free plan with limited access. Upgrade to a paid plan to unlock all features with a 7-day free trial.
+            You're currently in demo mode with limited access. Subscribe to a paid plan to unlock all features with a 7-day free trial.
           </p>
           <a 
             href="/checkout" 

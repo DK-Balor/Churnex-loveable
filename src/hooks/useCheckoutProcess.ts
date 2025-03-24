@@ -6,8 +6,7 @@ import { useToast } from '../components/ui/use-toast';
 import { 
   getSubscriptionPlans, 
   createCheckoutSession, 
-  handleCheckoutSuccess,
-  activateFreePlan
+  handleCheckoutSuccess
 } from '../utils/stripe';
 
 export interface CheckoutMessage {
@@ -52,11 +51,11 @@ export const useCheckoutProcess = () => {
 
     fetchPlans();
 
-    // Show message if checkout was canceled
+    // Show message if checkout was cancelled
     if (canceled) {
       setMessage({
         type: 'error',
-        text: "Checkout was canceled. Please try again when you're ready."
+        text: "Checkout was cancelled. Please try again when you're ready."
       });
     }
   }, [canceled, toast]);
@@ -127,33 +126,6 @@ export const useCheckoutProcess = () => {
     
     setIsLoading(true);
     try {
-      // Handle free plan activation separately (no Stripe checkout needed)
-      if (selectedPlan === 'free') {
-        try {
-          const result = await activateFreePlan(user.id);
-          
-          if (result.success) {
-            toast({
-              title: "Free Plan Activated",
-              description: "You've successfully activated the free plan.",
-              variant: "success"
-            });
-            
-            navigate('/dashboard');
-          }
-        } catch (error) {
-          console.error('Error activating free plan:', error);
-          toast({
-            title: "Activation Failed",
-            description: "There was a problem activating the free plan. Please try again.",
-            variant: "destructive",
-          });
-        } finally {
-          setIsLoading(false);
-        }
-        return;
-      }
-      
       // For paid plans, proceed with Stripe checkout
       try {
         const { url } = await createCheckoutSession(selectedPlan);

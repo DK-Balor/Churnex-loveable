@@ -1,28 +1,13 @@
-
 import { supabase } from '../integrations/supabase/client';
-import { useToast } from '../components/ui/use-toast';
 
 // Function to get the Stripe subscription plans
 export const getSubscriptionPlans = async () => {
   return [
     {
-      id: 'free',
-      name: 'Free',
-      price: 0,
-      currency: 'usd',
-      interval: 'month',
-      features: [
-        'Basic dashboard access',
-        'View basic metrics',
-        'Limited features',
-        'Email support'
-      ]
-    },
-    {
       id: 'price_growth',
       name: 'Growth',
-      price: 59,
-      currency: 'usd',
+      price: 49,
+      currency: 'gbp',
       interval: 'month',
       features: [
         'Up to 500 subscribers',
@@ -35,8 +20,8 @@ export const getSubscriptionPlans = async () => {
     {
       id: 'price_scale',
       name: 'Scale',
-      price: 119,
-      currency: 'usd',
+      price: 99,
+      currency: 'gbp',
       interval: 'month',
       features: [
         'Up to 2,000 subscribers',
@@ -49,8 +34,8 @@ export const getSubscriptionPlans = async () => {
     {
       id: 'price_pro',
       name: 'Pro',
-      price: 249,
-      currency: 'usd',
+      price: 199,
+      currency: 'gbp',
       interval: 'month',
       features: [
         'Unlimited subscribers',
@@ -64,8 +49,8 @@ export const getSubscriptionPlans = async () => {
 };
 
 // Function to format currency based on the current locale and currency
-export const formatCurrency = (amount: number, currency = 'usd') => {
-  return new Intl.NumberFormat('en-US', {
+export const formatCurrency = (amount: number, currency = 'gbp') => {
+  return new Intl.NumberFormat('en-GB', {
     style: 'currency',
     currency: currency.toUpperCase(),
     minimumFractionDigits: 0
@@ -86,7 +71,7 @@ export const getCurrentSubscription = async (userId: string) => {
 
     return {
       status: profile?.subscription_status || (profile?.subscription_plan ? 'active' : 'inactive'),
-      plan: profile?.subscription_plan || 'free', // Default to free plan if none is set
+      plan: profile?.subscription_plan || null, // Default to null if none is set
       currentPeriodEnd: profile?.trial_ends_at || new Date().toISOString(),
       isCanceled: profile?.subscription_status === 'canceled',
       isTrialing: profile?.trial_ends_at && new Date(profile.trial_ends_at) > new Date()
@@ -95,7 +80,7 @@ export const getCurrentSubscription = async (userId: string) => {
     console.error('Error getting subscription:', error);
     return {
       status: 'inactive',
-      plan: 'free', // Default to free plan
+      plan: null, // Default to null
       currentPeriodEnd: new Date().toISOString(),
       isCanceled: false,
       isTrialing: false
@@ -111,7 +96,7 @@ export const createCheckoutSession = async (priceId: string) => {
       body: { 
         priceId,
         successUrl: window.location.origin + '/checkout-success',
-        cancelUrl: window.location.origin + '/checkout?canceled=true'
+        cancelUrl: window.location.origin + '/checkout?cancelled=true'
       }
     });
 
@@ -146,7 +131,7 @@ export const handleCheckoutSuccess = async (sessionId: string, userId: string) =
     
     return { 
       success: !!profile?.subscription_plan && profile?.subscription_plan !== 'free',
-      plan: profile?.subscription_plan || 'free',
+      plan: profile?.subscription_plan || null,
       status: profile?.subscription_status || 'inactive'
     };
   } catch (error) {
@@ -167,7 +152,7 @@ export const cancelSubscription = async (userId: string) => {
     
     return data;
   } catch (error) {
-    console.error('Error canceling subscription:', error);
+    console.error('Error cancelling subscription:', error);
     throw error;
   }
 };
@@ -194,25 +179,9 @@ export const updatePaymentMethod = async (userId: string) => {
   }
 };
 
-// Function to activate a free plan
-export const activateFreePlan = async (userId: string) => {
-  try {
-    const { error } = await supabase
-      .from('user_metadata')
-      .update({
-        subscription_plan: 'free',
-        subscription_status: 'active'
-      })
-      .eq('id', userId);
-    
-    if (error) {
-      console.error('Error activating free plan:', error);
-      throw error;
-    }
-    
-    return { success: true, plan: 'free', status: 'active' };
-  } catch (error) {
-    console.error('Error activating free plan:', error);
-    throw error;
-  }
+// Function to check if a user is in read-only mode (no active subscription)
+export const isReadOnlyUser = (userId: string) => {
+  return getCurrentSubscription(userId).then(subscription => {
+    return subscription.status !== 'active' || !subscription.plan;
+  });
 };

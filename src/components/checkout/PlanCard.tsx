@@ -16,8 +16,6 @@ interface PlanCardProps {
 }
 
 const PlanCard: React.FC<PlanCardProps> = ({ plan, isSelected, onSelect }) => {
-  const isFree = plan.id === 'free';
-  
   return (
     <div
       className={`bg-white rounded-lg border-2 p-6 transition-all ${
@@ -29,20 +27,11 @@ const PlanCard: React.FC<PlanCardProps> = ({ plan, isSelected, onSelect }) => {
         {plan.name === 'Scale' && (
           <span className="bg-brand-green text-white text-xs px-2 py-1 rounded-full">Popular</span>
         )}
-        {isFree && (
-          <span className="bg-blue-500 text-white text-xs px-2 py-1 rounded-full">Basic</span>
-        )}
       </div>
       
       <div className="mb-6">
-        {isFree ? (
-          <span className="text-3xl font-bold">Free</span>
-        ) : (
-          <>
-            <span className="text-3xl font-bold">{formatCurrency(plan.price)}</span>
-            <span className="text-brand-dark-500">/{plan.interval}</span>
-          </>
-        )}
+        <span className="text-3xl font-bold">{formatCurrency(plan.price)}</span>
+        <span className="text-brand-dark-500">/{plan.interval}</span>
       </div>
       
       <ul className="space-y-3 mb-8">

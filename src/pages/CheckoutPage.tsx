@@ -19,7 +19,7 @@ export default function CheckoutPage() {
     handleCheckout
   } = useCheckoutProcess();
 
-  // Render a message if we're returning from checkout or if checkout was canceled
+  // Render a message if we're returning from checkout or if checkout was cancelled
   if (message) {
     return <StatusMessage message={message} />;
   }
@@ -39,7 +39,7 @@ export default function CheckoutPage() {
       
       <div className="mb-6 text-center">
         <h2 className="text-xl text-brand-dark-700 mb-2">All plans include a 7-day free trial</h2>
-        <p className="text-gray-500">Cancel anytime. No credit card required for free plan.</p>
+        <p className="text-gray-500">Cancel anytime. No payment needed until your trial ends.</p>
       </div>
       
       <PlanSelector

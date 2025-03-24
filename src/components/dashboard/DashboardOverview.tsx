@@ -3,7 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { getAIInsights } from '../../utils/ai';
 import { formatCurrency } from '../../utils/stripe';
-import { CalendarDays, BarChart3, Users, CreditCard, AlertTriangle } from 'lucide-react';
+import { CalendarDays, BarChart3, Users, CreditCard, AlertTriangle, Lock } from 'lucide-react';
 
 export default function DashboardOverview() {
   const { profile } = useAuth();
@@ -43,7 +43,7 @@ export default function DashboardOverview() {
   const timeRemaining = getTimeRemaining();
   const isTrialing = profile?.trial_ends_at && new Date(profile.trial_ends_at) > new Date();
   const isActive = profile?.subscription_status === 'active' || isTrialing;
-  const isFree = profile?.subscription_plan === 'free';
+  const isReadOnly = !isActive || !profile?.subscription_plan;
 
   // Mock data for the dashboard
   const metrics = [
@@ -79,57 +79,54 @@ export default function DashboardOverview() {
 
   return (
     <div className="space-y-8">
+      {/* Read-Only Banner for users without a subscription */}
+      {isReadOnly && (
+        <div className="bg-amber-50 border border-amber-200 p-4 rounded-lg flex items-center justify-between">
+          <div className="flex items-center">
+            <Lock className="h-6 w-6 mr-2 text-amber-600" />
+            <div>
+              <h3 className="font-medium">Demo Mode Active</h3>
+              <p className="text-sm">
+                You're currently viewing a demo dashboard. Subscribe to a plan to access all features and start reducing churn today.
+              </p>
+            </div>
+          </div>
+          <a 
+            href="/checkout" 
+            className="px-4 py-2 text-sm bg-brand-green text-white rounded-md hover:bg-brand-green-600 transition-colors"
+          >
+            Subscribe Now
+          </a>
+        </div>
+      )}
+
       {/* Subscription Status Banner */}
-      {profile && (
+      {profile && isActive && (
         <div className={`p-4 rounded-lg flex items-center justify-between ${
-          isActive 
-            ? isTrialing 
-              ? 'bg-blue-50 border border-blue-200' 
-              : isFree 
-                ? 'bg-gray-50 border border-gray-200' 
-                : 'bg-green-50 border border-green-200'
-            : 'bg-amber-50 border border-amber-200'
+          isTrialing 
+            ? 'bg-blue-50 border border-blue-200' 
+            : 'bg-green-50 border border-green-200'
         }`}>
           <div className="flex items-center">
             <CalendarDays className={`h-6 w-6 mr-2 ${
-              isActive 
-                ? isTrialing 
-                  ? 'text-blue-600' 
-                  : isFree 
-                    ? 'text-gray-600' 
-                    : 'text-green-600'
-                : 'text-amber-600'
+              isTrialing 
+                ? 'text-blue-600' 
+                : 'text-green-600'
             }`} />
             <div>
               <h3 className="font-medium">
                 {isTrialing 
                   ? 'Trial Active' 
-                  : isActive 
-                    ? isFree 
-                      ? 'Free Plan Active' 
-                      : 'Subscription Active' 
-                    : 'No Active Subscription'}
+                  : 'Subscription Active'}
               </h3>
               <p className="text-sm">
                 {isTrialing 
                   ? `Your trial ends in ${timeRemaining} days` 
-                  : isActive 
-                    ? isFree 
-                      ? 'You are on the Free plan with basic access' 
-                      : `${profile.subscription_plan?.charAt(0).toUpperCase() + profile.subscription_plan?.slice(1)} plan renews in ${timeRemaining} days` 
-                    : 'You don\'t have an active subscription'}
+                  : `${profile.subscription_plan?.charAt(0).toUpperCase() + profile.subscription_plan?.slice(1)} plan renews in ${timeRemaining} days`}
               </p>
             </div>
           </div>
-          {isFree && (
-            <a 
-              href="/checkout" 
-              className="px-4 py-2 text-sm bg-brand-green text-white rounded-md hover:bg-brand-green-600 transition-colors"
-            >
-              Upgrade Now
-            </a>
-          )}
-          {!isActive && (
+          {isTrialing && (
             <a 
               href="/checkout" 
               className="px-4 py-2 text-sm bg-brand-green text-white rounded-md hover:bg-brand-green-600 transition-colors"
@@ -141,7 +138,7 @@ export default function DashboardOverview() {
       )}
 
       {/* Metrics Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 ${isReadOnly ? 'opacity-75 pointer-events-none' : ''}`}>
         {metrics.map((metric, index) => (
           <div key={index} className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
             <div className="flex justify-between items-start mb-4">
@@ -157,7 +154,7 @@ export default function DashboardOverview() {
       </div>
 
       {/* AI Insights */}
-      <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
+      <div className={`bg-white p-6 rounded-lg shadow-sm border border-gray-100 ${isReadOnly ? 'opacity-75 pointer-events-none' : ''}`}>
         <h2 className="text-lg font-bold mb-4">AI Insights</h2>
         
         {isLoading ? (
@@ -194,6 +191,22 @@ export default function DashboardOverview() {
           </div>
         )}
       </div>
+
+      {/* Read-Only Overlay Message at the bottom */}
+      {isReadOnly && (
+        <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100 text-center">
+          <h3 className="font-bold text-lg mb-2">Ready to unlock full access?</h3>
+          <p className="text-gray-600 mb-4">
+            Subscribe to a plan to access all features, including custom analytics, AI-powered churn prevention, and priority support.
+          </p>
+          <a 
+            href="/checkout" 
+            className="px-6 py-3 bg-brand-green text-white rounded-md hover:bg-brand-green-600 transition-colors inline-block"
+          >
+            View Plans & Pricing
+          </a>
+        </div>
+      )}
     </div>
   );
 }
