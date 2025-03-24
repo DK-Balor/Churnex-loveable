@@ -33,16 +33,15 @@ export default defineConfig(({ mode }) => ({
   esbuild: {
     logOverride: { 
       'this-is-undefined-in-esm': 'silent',
-      // Add more overrides to silence TypeScript reference errors
       'commonjs-variable-in-esm': 'silent'
     },
-    tsconfigRaw: {
+    // Using a stringified JSON for tsconfigRaw to match the expected types
+    tsconfigRaw: JSON.stringify({
       compilerOptions: {
-        // Override compiler options that may be causing reference issues
         composite: false,
         incremental: true,
         isolatedModules: true
       }
-    }
+    })
   }
 }));
