@@ -46,7 +46,7 @@ export default function CheckoutPage() {
     if (canceled) {
       setMessage({
         type: 'error',
-        text: 'Checkout was canceled. Please try again when you're ready.'
+        text: "Checkout was canceled. Please try again when you're ready."
       });
     }
   }, [canceled, toast]);
