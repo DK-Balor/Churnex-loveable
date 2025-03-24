@@ -51,7 +51,7 @@ export const generateWinBackSuggestions = async (customerId: string) => {
       suggestions: [
         {
           title: 'One-month discount offer',
-          message: 'We noticed you've been with us for a while and we'd like to offer you a special discount of 20% off your next month's subscription as a thank you for your loyalty.',
+          message: "We noticed you've been with us for a while and we'd like to offer you a special discount of 20% off your next month's subscription as a thank you for your loyalty.",
           incentive: {
             type: 'discount',
             value: 20,
@@ -61,7 +61,7 @@ export const generateWinBackSuggestions = async (customerId: string) => {
         },
         {
           title: 'Feature upgrade',
-          message: 'We've noticed you've been using our analytics feature frequently. We'd like to offer you a free upgrade to our advanced analytics package for the next 3 months.',
+          message: "We've noticed you've been using our analytics feature frequently. We'd like to offer you a free upgrade to our advanced analytics package for the next 3 months.",
           incentive: {
             type: 'feature_upgrade',
             featureName: 'Advanced Analytics',
@@ -72,7 +72,7 @@ export const generateWinBackSuggestions = async (customerId: string) => {
         },
         {
           title: 'Consultation call',
-          message: 'We'd love to learn more about how we can better serve your needs. Would you be interested in scheduling a 30-minute consultation call with one of our customer success managers?',
+          message: "We'd love to learn more about how we can better serve your needs. Would you be interested in scheduling a 30-minute consultation call with one of our customer success managers?",
           incentive: {
             type: 'consultation',
             duration: 30,
