@@ -53,7 +53,7 @@ serve(async (req) => {
 
     const businessName = userMetadata?.business_name || "Customer";
 
-    // Create a Stripe checkout session
+    // Create a Stripe checkout session with a trial period
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ["card"],
       line_items: [
@@ -63,6 +63,9 @@ serve(async (req) => {
         },
       ],
       mode: "subscription",
+      subscription_data: {
+        trial_period_days: 7, // Add a 7-day free trial
+      },
       success_url: successUrl || `${req.headers.get("origin")}/checkout-success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: cancelUrl || `${req.headers.get("origin")}/checkout?canceled=true`,
       customer_email: user.email,

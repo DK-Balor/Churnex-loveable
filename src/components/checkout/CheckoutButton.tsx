@@ -5,9 +5,12 @@ interface CheckoutButtonProps {
   onClick: () => void;
   disabled: boolean;
   isLoading: boolean;
+  selectedPlan: string | null;
 }
 
-const CheckoutButton: React.FC<CheckoutButtonProps> = ({ onClick, disabled, isLoading }) => {
+const CheckoutButton: React.FC<CheckoutButtonProps> = ({ onClick, disabled, isLoading, selectedPlan }) => {
+  const isFree = selectedPlan === 'free';
+  
   return (
     <button
       onClick={onClick}
@@ -18,7 +21,7 @@ const CheckoutButton: React.FC<CheckoutButtonProps> = ({ onClick, disabled, isLo
           : 'bg-brand-green text-white hover:bg-brand-green-600'
       }`}
     >
-      {isLoading ? 'Processing...' : 'Continue to Checkout'}
+      {isLoading ? 'Processing...' : isFree ? 'Activate Free Plan' : 'Continue to Checkout'}
     </button>
   );
 };

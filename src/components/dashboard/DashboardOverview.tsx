@@ -43,6 +43,7 @@ export default function DashboardOverview() {
   const timeRemaining = getTimeRemaining();
   const isTrialing = profile?.trial_ends_at && new Date(profile.trial_ends_at) > new Date();
   const isActive = profile?.subscription_status === 'active' || isTrialing;
+  const isFree = profile?.subscription_plan === 'free';
 
   // Mock data for the dashboard
   const metrics = [
@@ -81,21 +82,53 @@ export default function DashboardOverview() {
       {/* Subscription Status Banner */}
       {profile && (
         <div className={`p-4 rounded-lg flex items-center justify-between ${
-          isActive ? 'bg-green-50 border border-green-200' : 'bg-amber-50 border border-amber-200'
+          isActive 
+            ? isTrialing 
+              ? 'bg-blue-50 border border-blue-200' 
+              : isFree 
+                ? 'bg-gray-50 border border-gray-200' 
+                : 'bg-green-50 border border-green-200'
+            : 'bg-amber-50 border border-amber-200'
         }`}>
           <div className="flex items-center">
-            <CalendarDays className={`h-6 w-6 mr-2 ${isActive ? 'text-green-600' : 'text-amber-600'}`} />
+            <CalendarDays className={`h-6 w-6 mr-2 ${
+              isActive 
+                ? isTrialing 
+                  ? 'text-blue-600' 
+                  : isFree 
+                    ? 'text-gray-600' 
+                    : 'text-green-600'
+                : 'text-amber-600'
+            }`} />
             <div>
-              <h3 className="font-medium">{isActive ? 'Subscription Active' : 'Subscription Inactive'}</h3>
+              <h3 className="font-medium">
+                {isTrialing 
+                  ? 'Trial Active' 
+                  : isActive 
+                    ? isFree 
+                      ? 'Free Plan Active' 
+                      : 'Subscription Active' 
+                    : 'No Active Subscription'}
+              </h3>
               <p className="text-sm">
                 {isTrialing 
-                  ? `Trial ends in ${timeRemaining} days` 
+                  ? `Your trial ends in ${timeRemaining} days` 
                   : isActive 
-                    ? `${profile.subscription_plan?.charAt(0).toUpperCase() + profile.subscription_plan?.slice(1)} plan renews in ${timeRemaining} days` 
+                    ? isFree 
+                      ? 'You are on the Free plan with basic access' 
+                      : `${profile.subscription_plan?.charAt(0).toUpperCase() + profile.subscription_plan?.slice(1)} plan renews in ${timeRemaining} days` 
                     : 'You don\'t have an active subscription'}
               </p>
             </div>
           </div>
+          {isFree && (
+            <a 
+              href="/checkout" 
+              className="px-4 py-2 text-sm bg-brand-green text-white rounded-md hover:bg-brand-green-600 transition-colors"
+            >
+              Upgrade Now
+            </a>
+          )}
           {!isActive && (
             <a 
               href="/checkout" 

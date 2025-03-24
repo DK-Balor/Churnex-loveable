@@ -70,18 +70,21 @@ serve(async (req) => {
           if (priceId === 'price_pro') plan = 'pro';
           
           if (plan) {
-            // Calculate trial end date (30 days from now)
-            const trialEndsAt = new Date();
-            trialEndsAt.setDate(trialEndsAt.getDate() + 30);
+            // Check if subscription is in trial period
+            const isTrialing = subscription.status === 'trialing';
+            const trialEndDate = isTrialing ? new Date(subscription.trial_end * 1000) : null;
             
             // Update the user's subscription in the database
             const { error } = await supabaseClient
               .from('user_metadata')
               .update({
                 subscription_plan: plan,
+                subscription_status: subscription.status,
                 stripe_customer_id: session.customer,
                 stripe_subscription_id: subscriptionId,
-                trial_ends_at: trialEndsAt.toISOString()
+                trial_ends_at: isTrialing ? trialEndDate.toISOString() : null,
+                subscription_current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
+                subscription_cancel_at_period_end: subscription.cancel_at_period_end || false
               })
               .eq('id', userId);
             
@@ -112,13 +115,18 @@ serve(async (req) => {
         
         const userId = data.id;
         
+        // Check if subscription is in trial
+        const isTrialing = subscription.status === 'trialing';
+        const trialEndDate = isTrialing ? new Date(subscription.trial_end * 1000) : null;
+        
         // Update subscription status
         await supabaseClient
           .from('user_metadata')
           .update({
             subscription_status: subscription.status,
             subscription_current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
-            subscription_cancel_at_period_end: subscription.cancel_at_period_end
+            subscription_cancel_at_period_end: subscription.cancel_at_period_end,
+            trial_ends_at: isTrialing ? trialEndDate.toISOString() : null
           })
           .eq('id', userId);
         
@@ -147,10 +155,35 @@ serve(async (req) => {
         await supabaseClient
           .from('user_metadata')
           .update({
-            subscription_plan: null,
-            subscription_status: 'canceled'
+            subscription_plan: 'free', // Downgrade to free plan when canceled
+            subscription_status: 'canceled',
+            trial_ends_at: null
           })
           .eq('id', userId);
+        
+        break;
+      }
+
+      case 'customer.subscription.trial_will_end': {
+        // Triggered 3 days before trial ends
+        const subscription = event.data.object;
+        const stripeCustomerId = subscription.customer;
+        
+        // Get the user with this Stripe customer ID
+        const { data, error } = await supabaseClient
+          .from('user_metadata')
+          .select('id')
+          .eq('stripe_customer_id', stripeCustomerId)
+          .single();
+        
+        if (error || !data) {
+          console.error('Error finding user with customer ID:', error);
+          break;
+        }
+        
+        // Here you could send email notifications or implement other logic
+        // for notifying users their trial is about to end
+        console.log(`Trial will end soon for user: ${data.id}`);
         
         break;
       }

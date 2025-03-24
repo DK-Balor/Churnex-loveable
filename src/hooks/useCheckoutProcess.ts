@@ -1,12 +1,13 @@
 
 import { useState, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../components/ui/use-toast';
 import { 
   getSubscriptionPlans, 
   createCheckoutSession, 
-  handleCheckoutSuccess 
+  handleCheckoutSuccess,
+  activateFreePlan
 } from '../utils/stripe';
 
 export interface CheckoutMessage {
@@ -17,6 +18,7 @@ export interface CheckoutMessage {
 export const useCheckoutProcess = () => {
   const [searchParams] = useSearchParams();
   const { user } = useAuth();
+  const navigate = useNavigate();
   const { toast } = useToast();
   const [plans, setPlans] = useState<any[]>([]);
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
@@ -79,7 +81,7 @@ export const useCheckoutProcess = () => {
             
             // Redirect to dashboard after 3 seconds
             setTimeout(() => {
-              window.location.href = '/dashboard';
+              navigate('/dashboard');
             }, 3000);
           } else {
             setMessage({
@@ -106,7 +108,7 @@ export const useCheckoutProcess = () => {
     };
 
     processCheckoutSuccess();
-  }, [sessionId, user, toast]);
+  }, [sessionId, user, toast, navigate]);
 
   const handleSelectPlan = (planId: string) => {
     setSelectedPlan(planId);
@@ -124,6 +126,23 @@ export const useCheckoutProcess = () => {
     
     setIsLoading(true);
     try {
+      // Handle free plan activation separately (no Stripe checkout needed)
+      if (selectedPlan === 'free') {
+        const result = await activateFreePlan(user.id);
+        
+        if (result.success) {
+          toast({
+            title: "Free Plan Activated",
+            description: "You've successfully activated the free plan.",
+            variant: "success"
+          });
+          
+          navigate('/dashboard');
+        }
+        return;
+      }
+      
+      // For paid plans, proceed with Stripe checkout
       const { url } = await createCheckoutSession(selectedPlan);
       
       if (url) {

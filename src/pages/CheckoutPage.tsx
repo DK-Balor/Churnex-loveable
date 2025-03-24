@@ -36,6 +36,7 @@ export default function CheckoutPage() {
           onClick={handleCheckout}
           disabled={!selectedPlan}
           isLoading={isLoading}
+          selectedPlan={selectedPlan}
         />
         
         <CheckoutFooter />

@@ -5,6 +5,19 @@ import { supabase } from '../integrations/supabase/client';
 export const getSubscriptionPlans = async () => {
   return [
     {
+      id: 'free',
+      name: 'Free',
+      price: 0,
+      currency: 'usd',
+      interval: 'month',
+      features: [
+        'Basic dashboard access',
+        'View basic metrics',
+        'Limited features',
+        'Email support'
+      ]
+    },
+    {
       id: 'price_growth',
       name: 'Growth',
       price: 59,
@@ -72,7 +85,7 @@ export const getCurrentSubscription = async (userId: string) => {
 
     return {
       status: profile?.subscription_status || 'inactive',
-      plan: profile?.subscription_plan || 'none',
+      plan: profile?.subscription_plan || 'free', // Default to free plan if none is set
       currentPeriodEnd: profile?.subscription_current_period_end || profile?.trial_ends_at || new Date().toISOString(),
       isCanceled: profile?.subscription_cancel_at_period_end || false,
       isTrialing: profile?.trial_ends_at && new Date(profile.trial_ends_at) > new Date()
@@ -81,7 +94,7 @@ export const getCurrentSubscription = async (userId: string) => {
     console.error('Error getting subscription:', error);
     return {
       status: 'inactive',
-      plan: 'none',
+      plan: 'free', // Default to free plan
       currentPeriodEnd: new Date().toISOString(),
       isCanceled: false,
       isTrialing: false
@@ -124,7 +137,7 @@ export const handleCheckoutSuccess = async (sessionId: string, userId: string) =
     
     return { 
       success: !!profile?.subscription_plan,
-      plan: profile?.subscription_plan || 'none'
+      plan: profile?.subscription_plan || 'free'
     };
   } catch (error) {
     console.error('Error verifying checkout:', error);
@@ -167,6 +180,26 @@ export const updatePaymentMethod = async (userId: string) => {
     return data;
   } catch (error) {
     console.error('Error updating payment method:', error);
+    throw error;
+  }
+};
+
+// Function to activate a free plan
+export const activateFreePlan = async (userId: string) => {
+  try {
+    const { error } = await supabase
+      .from('user_metadata')
+      .update({
+        subscription_plan: 'free',
+        subscription_status: 'active'
+      })
+      .eq('id', userId);
+    
+    if (error) throw error;
+    
+    return { success: true, plan: 'free' };
+  } catch (error) {
+    console.error('Error activating free plan:', error);
     throw error;
   }
 };
