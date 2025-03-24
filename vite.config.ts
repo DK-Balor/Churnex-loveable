@@ -17,19 +17,6 @@ export default defineConfig(({ mode }) => ({
   },
   server: {
     host: "::",
-    port: 8080,
-    allowedHosts: ["de1a2121-ac1b-48af-b6bd-f70fda5830a0.lovableproject.com"]
+    port: 8080
   },
-  build: {
-    sourcemap: mode === 'development',
-    outDir: 'dist'
-  },
-  optimizeDeps: {
-    esbuildOptions: {
-      target: 'es2020'
-    }
-  },
-  esbuild: {
-    target: 'es2020'
-  }
 }));
