@@ -8,9 +8,14 @@ import { componentTagger } from "lovable-tagger";
 export default defineConfig(({ mode }) => ({
   plugins: [
     react({
-      // Add TypeScript specific options
+      // Enhanced TypeScript options
       babel: {
-        plugins: []
+        plugins: [],
+        // Ensure TypeScript compatibility
+        presets: [
+          ['@babel/preset-env', { targets: { node: 'current' } }],
+          '@babel/preset-typescript'
+        ]
       }
     }),
     mode === 'development' && componentTagger(),
@@ -30,18 +35,44 @@ export default defineConfig(({ mode }) => ({
     outDir: 'dist',
     // Ensure TS references are handled properly
     rollupOptions: {
-      external: []
+      external: [],
+      output: {
+        // Ensure clean module structure
+        manualChunks: undefined
+      }
     },
     commonjsOptions: {
       transformMixedEsModules: true,
+      // Improved CommonJS handling
+      extensions: ['.js', '.jsx', '.ts', '.tsx']
     }
   },
   optimizeDeps: {
     esbuildOptions: {
-      target: 'es2020'
+      target: 'es2020',
+      // Ensure proper TypeScript handling
+      tsconfigRaw: {
+        compilerOptions: {
+          experimentalDecorators: true,
+          target: 'es2020',
+          useDefineForClassFields: true,
+          module: 'esnext',
+          moduleResolution: 'node',
+          isolatedModules: true,
+          noEmit: false, // Override noEmit to fix the reference issue
+        }
+      }
     }
   },
   esbuild: {
-    target: 'es2020'
+    target: 'es2020',
+    // Enhanced TypeScript support
+    tsconfigRaw: {
+      compilerOptions: {
+        target: 'es2020',
+        module: 'esnext',
+        noEmit: false // Explicitly override noEmit
+      }
+    }
   }
 }));
