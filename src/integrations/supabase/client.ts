@@ -22,12 +22,13 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseKey, {
 export const sendVerificationEmail = async (email: string) => {
   try {
     console.log('Sending verification email to:', email);
-    const { error } = await supabase.auth.signUp({
+    
+    // Use signInWithOtp instead of signUp for more reliable email delivery
+    const { error } = await supabase.auth.signInWithOtp({
       email,
-      password: '',
       options: {
         emailRedirectTo: `${window.location.origin}/auth?verification=link`,
-        data: {} // Include any additional user metadata if needed
+        shouldCreateUser: true
       }
     });
     

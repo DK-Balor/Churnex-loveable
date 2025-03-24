@@ -225,7 +225,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       toast({
         title: "Verification email sent",
-        description: "Please check your inbox for the verification link.",
+        description: "Please check your inbox (and spam folder) for the verification link.",
       });
       
       return { error: null };
@@ -243,6 +243,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signUp = async (email: string, password: string, fullName: string, businessName: string) => {
     try {
       console.log('Signing up user:', email);
+      
+      // First create the user with password
       const response = await supabase.auth.signUp({ 
         email, 
         password,
@@ -264,7 +266,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           description: response.error.message,
           variant: "destructive",
         });
-      } else if (response.data.user) {
+        return { error: response.error, data: null };
+      } 
+      
+      if (response.data.user) {
         console.log('User created:', response.data.user.id);
         setEmailConfirmed(false);
         
@@ -278,7 +283,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           login_count: 1
         }]);
         
-        console.log('Signup successful, verification email should be sent automatically');
+        // After creating the user, explicitly send a verification email
+        await sendVerificationEmail(email);
+        
+        console.log('Signup successful, verification email sent explicitly');
       }
 
       return { error: response.error, data: response.data };

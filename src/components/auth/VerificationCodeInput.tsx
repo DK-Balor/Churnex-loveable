@@ -47,7 +47,7 @@ const VerificationCodeInput: React.FC<VerificationCodeInputProps> = ({
       } else {
         toast({
           title: "Verification email sent",
-          description: `A verification link has been sent to ${email}. Please check your inbox and click the link to verify your email.`,
+          description: `A verification link has been sent to ${email}. Please check your inbox (including spam/junk folders) and click the link to verify your email.`,
         });
       }
     } catch (error: any) {
@@ -73,7 +73,8 @@ const VerificationCodeInput: React.FC<VerificationCodeInputProps> = ({
       
       <div className="bg-amber-50 border border-amber-200 rounded-md p-4 mb-4">
         <p className="text-sm text-amber-800">
-          A verification link has been sent to your email address. Please check your inbox (and spam folder) and click the link to complete the verification process.
+          <strong>Important:</strong> The verification email may take a few minutes to arrive. 
+          Please check your spam/junk folders if you don't see it in your inbox.
         </p>
       </div>
 
