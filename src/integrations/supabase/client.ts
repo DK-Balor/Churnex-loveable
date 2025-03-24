@@ -8,13 +8,8 @@ const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS
 // Session expiry in seconds (24 hours)
 export const SESSION_EXPIRY = 24 * 60 * 60;
 
-// Get the current site URL - works in both development and production
-const getSiteUrl = () => {
-  // Don't use localhost in the URL - use the actual domain or IP
-  const url = window.location.origin;
-  console.log('Current site URL:', url);
-  return url;
-};
+// Fixed production URL for redirects
+const SITE_URL = 'https://churnex.lovable.app';
 
 export const supabase = createClient<Database>(supabaseUrl, supabaseKey, {
   auth: {
@@ -23,8 +18,8 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseKey, {
     storage: localStorage,
     flowType: 'pkce',
     debug: true, // Enable this to see detailed auth logs
-    // Use the site URL for redirects to avoid localhost issues
-    redirectTo: `${getSiteUrl()}/auth?verification=link`
+    // Use the fixed site URL for redirects
+    redirectTo: `${SITE_URL}/auth?verification=link`
   }
 });
 
@@ -33,7 +28,7 @@ export const sendVerificationEmail = async (email: string) => {
   try {
     console.log('Sending verification email to:', email);
     
-    const redirectUrl = `${getSiteUrl()}/auth?verification=link`;
+    const redirectUrl = `${SITE_URL}/auth?verification=link`;
     console.log('Using redirect URL:', redirectUrl);
     
     // Use signInWithOtp instead of signUp for more reliable email delivery
