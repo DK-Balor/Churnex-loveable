@@ -1,26 +1,32 @@
 
 import React from 'react'
+import { Routes, Route } from 'react-router-dom'
+import Layout from './components/Layout'
+import Home from './pages/Home'
+import Dashboard from './pages/Dashboard'
+import Customers from './pages/Customers'
+import ChurnPrediction from './pages/ChurnPrediction'
+import RecoveryStrategies from './pages/RecoveryStrategies'
+import Pricing from './pages/Pricing'
+import Login from './pages/Login'
+import Register from './pages/Register'
+import NotFound from './pages/NotFound'
 
 function App() {
   return (
-    <div className="min-h-screen bg-slate-50">
-      <header className="bg-gradient-to-r from-blue-600 to-blue-800 p-6 shadow-md">
-        <div className="container mx-auto">
-          <h1 className="text-3xl font-bold text-white">Churnex</h1>
-          <p className="text-blue-100">Intelligent Customer Retention Platform</p>
-        </div>
-      </header>
-      
-      <main className="container mx-auto p-6">
-        <div className="bg-white rounded-lg shadow-md p-8 mt-8">
-          <h2 className="text-2xl font-semibold text-gray-800 mb-4">Welcome to Churnex</h2>
-          <p className="text-gray-600">
-            Predict customer churn and enhance retention strategies with advanced machine learning models.
-            Leverage actionable insights to reduce churn, improve customer lifetime value, and drive sustainable growth.
-          </p>
-        </div>
-      </main>
-    </div>
+    <Routes>
+      <Route path="/" element={<Layout />}>
+        <Route index element={<Home />} />
+        <Route path="dashboard" element={<Dashboard />} />
+        <Route path="customers" element={<Customers />} />
+        <Route path="predictions" element={<ChurnPrediction />} />
+        <Route path="recovery" element={<RecoveryStrategies />} />
+        <Route path="pricing" element={<Pricing />} />
+        <Route path="login" element={<Login />} />
+        <Route path="register" element={<Register />} />
+        <Route path="*" element={<NotFound />} />
+      </Route>
+    </Routes>
   )
 }
 
