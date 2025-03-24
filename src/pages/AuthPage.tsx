@@ -8,6 +8,7 @@ import SignUpForm from '../components/auth/SignUpForm';
 import AuthStatusMessage from '../components/auth/AuthStatusMessage';
 import { useAuthFormValidation } from '../hooks/useAuthFormValidation';
 import { useToast } from '../components/ui/use-toast';
+import { MailCheck } from 'lucide-react';
 
 const AuthFormContent = () => {
   const { state, actions } = useAuthForm();
@@ -38,7 +39,7 @@ const AuthFormContent = () => {
     setBusinessNameTouched
   } = actions;
 
-  const { signIn, signUp, user } = useAuth();
+  const { signIn, signUp, user, emailConfirmed, resendVerificationEmail } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -65,11 +66,22 @@ const AuthFormContent = () => {
   }, [isLogin]);
 
   useEffect(() => {
-    // If user is already logged in, redirect to dashboard
-    if (user) {
+    // If user is already logged in and email is verified, redirect to dashboard
+    if (user && emailConfirmed) {
       navigate('/dashboard');
     }
-  }, [user, navigate]);
+  }, [user, emailConfirmed, navigate]);
+
+  const handleResendVerification = async () => {
+    if (!email) {
+      setError('Please enter your email address to resend verification');
+      return;
+    }
+    
+    setIsLoading(true);
+    await resendVerificationEmail(email);
+    setIsLoading(false);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -94,17 +106,22 @@ const AuthFormContent = () => {
     try {
       if (isLogin) {
         // Handle login
-        const { error } = await signIn(email, password);
-        if (error) throw error;
+        const { error, emailVerificationNeeded } = await signIn(email, password);
         
-        // Show success message
-        setSuccess('Login successful! Redirecting to dashboard...');
-        toast({
-          title: "Login successful",
-          description: "Redirecting to dashboard...",
-          variant: "default",
-        });
-        // Redirect will happen automatically from AuthContext useEffect
+        if (error && !emailVerificationNeeded) {
+          throw error;
+        }
+        
+        if (!error) {
+          // Show success message
+          setSuccess('Login successful! Redirecting to dashboard...');
+          toast({
+            title: "Login successful",
+            description: "Redirecting to dashboard...",
+            variant: "default",
+          });
+          // Redirect will happen automatically from AuthContext useEffect
+        }
       } else {
         // Handle signup
         if (!fullName || !businessName) {
@@ -119,10 +136,10 @@ const AuthFormContent = () => {
         if (error) throw error;
         
         // Show success message
-        setSuccess('Account created successfully! You can now log in.');
+        setSuccess('Account created successfully! Please check your email to verify your account.');
         toast({
           title: "Account created",
-          description: "You can now log in with your credentials.",
+          description: "Please check your email to verify your account.",
           variant: "default",
         });
         
@@ -144,6 +161,58 @@ const AuthFormContent = () => {
       setIsLoading(false);
     }
   };
+
+  // Show email verification UI if user exists but email is not confirmed
+  if (user && !emailConfirmed) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex flex-col justify-center">
+        <div className="sm:mx-auto sm:w-full sm:max-w-md mb-8">
+          <Link to="/" className="flex justify-center">
+            <h1 className="text-3xl font-bold text-brand-dark-800">
+              Churnex<span className="text-sm align-top">™</span>
+            </h1>
+          </Link>
+        </div>
+
+        <div className="sm:mx-auto sm:w-full sm:max-w-md">
+          <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
+            <div className="text-center mb-6">
+              <div className="flex justify-center mb-4">
+                <div className="h-12 w-12 rounded-full bg-brand-green-100 flex items-center justify-center">
+                  <MailCheck className="h-6 w-6 text-brand-green" />
+                </div>
+              </div>
+              <h2 className="text-2xl font-bold text-brand-dark-900">Verify your email</h2>
+              <p className="mt-2 text-sm text-brand-dark-500">
+                We've sent a verification email to <span className="font-medium">{user.email}</span>.
+                Please check your inbox and click the verification link.
+              </p>
+            </div>
+            
+            <div className="mt-4">
+              <button
+                onClick={handleResendVerification}
+                disabled={state.isLoading}
+                className={`w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white transition-colors duration-300 
+                  ${state.isLoading ? 'bg-brand-green-300 cursor-not-allowed' : 'bg-brand-green hover:bg-brand-green-600'}`}
+              >
+                {state.isLoading ? 'Sending...' : 'Resend verification email'}
+              </button>
+            </div>
+            
+            <div className="mt-4 text-center">
+              <button 
+                onClick={() => signOut()} 
+                className="text-sm text-brand-dark-500 hover:text-brand-dark-700"
+              >
+                Sign out
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
   
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col justify-center">

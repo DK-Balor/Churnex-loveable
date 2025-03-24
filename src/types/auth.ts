@@ -18,14 +18,20 @@ export type AuthContextType = {
   profile: UserProfile | null;
   isLoading: boolean;
   isProfileLoading: boolean;
+  emailConfirmed: boolean;
   signIn: (email: string, password: string) => Promise<{
     error: Error | null;
+    emailVerificationNeeded?: boolean;
+    data?: any;
   }>;
   signUp: (email: string, password: string, fullName: string, businessName: string) => Promise<{
     error: Error | null;
     data: any;
   }>;
   signOut: () => Promise<void>;
+  resendVerificationEmail: (email: string) => Promise<{
+    error: Error | null;
+  }>;
   updateProfile: (updates: Partial<UserProfile>) => Promise<{
     error: Error | null;
     data: UserProfile | null;

@@ -13,6 +13,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [emailConfirmed, setEmailConfirmed] = useState<boolean>(true);
   const { toast } = useToast();
   const { profile, isProfileLoading, updateProfile } = useProfile(user);
 
@@ -36,6 +37,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         setSession(session);
         setUser(session?.user ?? null);
+        
+        // Check if email is confirmed
+        if (session?.user) {
+          setEmailConfirmed(session.user.email_confirmed_at !== null);
+        }
+        
         setIsLoading(false);
         
         // Update user activity when session changes
@@ -58,6 +65,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             title: "Signed out",
             description: "You have been signed out successfully.",
           });
+        } else if (event === 'USER_UPDATED') {
+          // Check if email is confirmed after update
+          if (session?.user && session.user.email_confirmed_at) {
+            setEmailConfirmed(true);
+            toast({
+              title: "Email verified",
+              description: "Your email has been successfully verified.",
+            });
+          }
         }
       }
     );
@@ -80,6 +96,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       setSession(session);
       setUser(session?.user ?? null);
+      
+      // Check if email is confirmed for existing session
+      if (session?.user) {
+        setEmailConfirmed(session.user.email_confirmed_at !== null);
+      }
+      
       setIsLoading(false);
       
       // Update user activity on initial load if user is logged in
@@ -105,12 +127,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       subscription.unsubscribe();
       clearInterval(checkInterval);
     };
-  }, [session]);
+  }, []);
 
   const signIn = async (email: string, password: string) => {
     try {
       console.log('Signing in user:', email);
-      const { error } = await supabase.auth.signInWithPassword({ 
+      const { error, data } = await supabase.auth.signInWithPassword({ 
         email, 
         password,
         options: {
@@ -121,6 +143,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       if (error) {
         console.error('Sign in error:', error);
+        
+        // Handle specific error for unverified email
+        if (error.message.includes('Email not confirmed')) {
+          setEmailConfirmed(false);
+          toast({
+            title: "Email not verified",
+            description: "Please check your inbox and verify your email address, or request a new verification email.",
+            variant: "destructive",
+          });
+          // Return the user even though there was an error
+          return { error, emailVerificationNeeded: true };
+        }
+        
         toast({
           title: "Authentication failed",
           description: error.message,
@@ -128,12 +163,46 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         });
       }
       
-      return { error };
+      return { error, data };
     } catch (error) {
       console.error('Sign in exception:', error);
       toast({
         title: "Authentication error",
         description: "An unexpected error occurred during sign in.",
+        variant: "destructive",
+      });
+      return { error: error as Error };
+    }
+  };
+
+  const resendVerificationEmail = async (email: string) => {
+    try {
+      const { error } = await supabase.auth.resend({
+        type: 'signup',
+        email,
+      });
+      
+      if (error) {
+        console.error('Error resending verification email:', error);
+        toast({
+          title: "Error",
+          description: error.message,
+          variant: "destructive",
+        });
+        return { error };
+      }
+      
+      toast({
+        title: "Verification email sent",
+        description: "Please check your inbox for the verification link.",
+      });
+      
+      return { error: null };
+    } catch (error) {
+      console.error('Exception resending verification email:', error);
+      toast({
+        title: "Error",
+        description: "Failed to send verification email. Please try again.",
         variant: "destructive",
       });
       return { error: error as Error };
@@ -165,6 +234,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         });
       } else if (response.data.user) {
         console.log('User created:', response.data.user.id);
+        setEmailConfirmed(false);
+        
         // Create the user profile
         await supabase.from('user_metadata').insert([{
           id: response.data.user.id,
@@ -177,7 +248,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         toast({
           title: "Account created",
-          description: "Your account has been created successfully!",
+          description: "Your account has been created successfully! Please check your email to verify your account.",
         });
       }
 
@@ -212,9 +283,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     profile,
     isLoading,
     isProfileLoading,
+    emailConfirmed,
     signIn,
     signUp,
     signOut,
+    resendVerificationEmail,
     updateProfile
   };
 
