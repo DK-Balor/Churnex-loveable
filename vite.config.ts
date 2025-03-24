@@ -27,7 +27,7 @@ export default defineConfig(({ mode }) => ({
     sourcemap: true,
   },
   optimizeDeps: {
-    exclude: [], // Removed tsconfig.node.json from the exclusions
+    exclude: [],
     esbuildOptions: {
       // Fix for TypeScript configuration issues
       tsconfigRaw: {
@@ -37,7 +37,9 @@ export default defineConfig(({ mode }) => ({
           target: 'es2020',
           skipLibCheck: true,
           isolatedModules: true
-        }
+        },
+        // Remove references that might cause emit issues
+        references: []
       }
     }
   }
