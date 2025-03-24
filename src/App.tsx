@@ -12,6 +12,7 @@ import RecoveryPage from './pages/RecoveryPage';
 import ChurnPredictionPage from './pages/ChurnPredictionPage';
 import SettingsPage from './pages/SettingsPage';
 import CheckoutPage from './pages/CheckoutPage';
+import { Toaster } from './components/ui/toaster';
 
 // Protected route component
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -68,6 +69,9 @@ function App() {
           {/* Catch-all route */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
+        
+        {/* Toast notifications */}
+        <Toaster />
       </Router>
     </AuthProvider>
   );

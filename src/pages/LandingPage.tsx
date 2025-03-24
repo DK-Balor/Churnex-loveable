@@ -1,9 +1,11 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { BarChart3, AlertCircle, TrendingUp, Users } from 'lucide-react';
 
 export default function LandingPage() {
+  const [isHovering, setIsHovering] = useState(false);
+  
   return (
     <div className="min-h-screen bg-white">
       {/* Navigation */}
@@ -91,20 +93,33 @@ export default function LandingPage() {
           </div>
 
           <div className="md:w-1/2">
-            {/* Dashboard Preview */}
-            <div className="bg-white rounded-lg shadow-card overflow-hidden border border-gray-100">
-              <div className="p-4 bg-gray-50 border-b border-gray-100">
+            {/* Dashboard Preview with hover animation */}
+            <div 
+              className={`bg-white rounded-lg shadow-card overflow-hidden border border-gray-100 transition-all duration-300 ${isHovering ? 'transform scale-105' : ''}`}
+              onMouseEnter={() => setIsHovering(true)}
+              onMouseLeave={() => setIsHovering(false)}
+            >
+              <div className="p-4 bg-gray-50 border-b border-gray-100 flex justify-between items-center">
                 <h3 className="text-lg font-semibold text-brand-dark-700">Revenue Recovery Dashboard</h3>
+                <div className="flex space-x-1">
+                  <div className="w-3 h-3 rounded-full bg-red-400"></div>
+                  <div className="w-3 h-3 rounded-full bg-yellow-400"></div>
+                  <div className="w-3 h-3 rounded-full bg-green-400"></div>
+                </div>
               </div>
               <div className="p-6">
                 <div className="grid grid-cols-2 gap-4 mb-6">
-                  <div className="bg-white p-4 rounded-lg border border-gray-100">
+                  <div className={`bg-white p-4 rounded-lg border border-gray-100 transition-all duration-500 ${isHovering ? 'bg-brand-green-50' : ''}`}>
                     <p className="text-sm text-brand-dark-500">Revenue Recovered</p>
-                    <p className="text-3xl font-bold text-brand-dark-900">$28,429</p>
+                    <p className={`text-3xl font-bold transition-all duration-500 ${isHovering ? 'text-brand-green' : 'text-brand-dark-900'}`}>
+                      {isHovering ? '$31,547' : '$28,429'}
+                    </p>
                   </div>
-                  <div className="bg-white p-4 rounded-lg border border-gray-100">
+                  <div className={`bg-white p-4 rounded-lg border border-gray-100 transition-all duration-500 ${isHovering ? 'bg-brand-green-50' : ''}`}>
                     <p className="text-sm text-brand-dark-500">Recovery Rate</p>
-                    <p className="text-3xl font-bold text-brand-green">87%</p>
+                    <p className={`text-3xl font-bold transition-all duration-500 ${isHovering ? 'text-brand-green' : 'text-brand-green'}`}>
+                      {isHovering ? '92%' : '87%'}
+                    </p>
                   </div>
                 </div>
                 
@@ -117,8 +132,13 @@ export default function LandingPage() {
                     {[30, 45, 40, 60, 50, 45, 70, 55, 60, 80].map((height, i) => (
                       <div
                         key={i}
-                        className={`w-full rounded-t-sm ${i % 3 === 0 ? 'bg-brand-green' : 'bg-brand-dark-400'}`}
-                        style={{ height: `${height}%` }}
+                        className={`w-full rounded-t-sm ${i % 3 === 0 ? 'bg-brand-green' : 'bg-brand-dark-400'} ${
+                          isHovering && i === 9 ? 'animate-pulse h-[90%]' : ''
+                        }`}
+                        style={{ 
+                          height: `${isHovering && i === 8 ? height + 10 : height}%`,
+                          transition: 'height 0.5s ease-in-out'
+                        }}
                       ></div>
                     ))}
                   </div>
@@ -126,8 +146,10 @@ export default function LandingPage() {
                 
                 <div className="flex justify-between">
                   <button className="text-brand-dark-600 text-sm font-medium">View Full Dashboard</button>
-                  <div className="bg-brand-green-50 text-brand-green-600 px-2 py-1 text-xs rounded-md">
-                    New Alert
+                  <div className={`px-2 py-1 text-xs rounded-md transition-all duration-300 ${
+                    isHovering ? 'bg-brand-green text-white' : 'bg-brand-green-50 text-brand-green-600'
+                  }`}>
+                    {isHovering ? 'Risk Alert: 3 customers' : 'New Alert'}
                   </div>
                 </div>
               </div>
