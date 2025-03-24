@@ -1,4 +1,3 @@
-
 import { supabase } from '../integrations/supabase/client';
 
 // Function to get the Stripe subscription plans
@@ -84,10 +83,10 @@ export const getCurrentSubscription = async (userId: string) => {
     if (error) throw error;
 
     return {
-      status: profile?.subscription_status || 'inactive',
+      status: profile?.subscription_plan ? 'active' : 'inactive',
       plan: profile?.subscription_plan || 'free', // Default to free plan if none is set
-      currentPeriodEnd: profile?.subscription_current_period_end || profile?.trial_ends_at || new Date().toISOString(),
-      isCanceled: profile?.subscription_cancel_at_period_end || false,
+      currentPeriodEnd: profile?.trial_ends_at || new Date().toISOString(),
+      isCanceled: false,
       isTrialing: profile?.trial_ends_at && new Date(profile.trial_ends_at) > new Date()
     };
   } catch (error) {
@@ -190,12 +189,14 @@ export const activateFreePlan = async (userId: string) => {
     const { error } = await supabase
       .from('user_metadata')
       .update({
-        subscription_plan: 'free',
-        subscription_status: 'active'
+        subscription_plan: 'free'
       })
       .eq('id', userId);
     
-    if (error) throw error;
+    if (error) {
+      console.error('Error activating free plan:', error);
+      throw error;
+    }
     
     return { success: true, plan: 'free' };
   } catch (error) {

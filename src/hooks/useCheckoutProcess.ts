@@ -77,6 +77,7 @@ export const useCheckoutProcess = () => {
             toast({
               title: "Subscription activated",
               description: `You have successfully subscribed to the ${result.plan.charAt(0).toUpperCase() + result.plan.slice(1)} plan.`,
+              variant: "success",
             });
             
             // Redirect to dashboard after 3 seconds
@@ -128,41 +129,51 @@ export const useCheckoutProcess = () => {
     try {
       // Handle free plan activation separately (no Stripe checkout needed)
       if (selectedPlan === 'free') {
-        const result = await activateFreePlan(user.id);
-        
-        if (result.success) {
-          toast({
-            title: "Free Plan Activated",
-            description: "You've successfully activated the free plan.",
-            variant: "success"
-          });
+        try {
+          const result = await activateFreePlan(user.id);
           
-          navigate('/dashboard');
+          if (result.success) {
+            toast({
+              title: "Free Plan Activated",
+              description: "You've successfully activated the free plan.",
+            });
+            
+            navigate('/dashboard');
+          }
+        } catch (error) {
+          console.error('Error activating free plan:', error);
+          toast({
+            title: "Activation Failed",
+            description: "There was a problem activating the free plan. Please try again.",
+            variant: "destructive",
+          });
         }
         return;
       }
       
       // For paid plans, proceed with Stripe checkout
-      const { url } = await createCheckoutSession(selectedPlan);
-      
-      if (url) {
-        // Redirect to Stripe Checkout
-        window.location.href = url;
-      } else {
-        throw new Error('No checkout URL returned');
+      try {
+        const { url } = await createCheckoutSession(selectedPlan);
+        
+        if (url) {
+          // Redirect to Stripe Checkout
+          window.location.href = url;
+        } else {
+          throw new Error('No checkout URL returned');
+        }
+      } catch (error) {
+        console.error('Error creating checkout session:', error);
+        setMessage({
+          type: 'error',
+          text: 'There was an error creating your checkout session. Please try again.'
+        });
+        
+        toast({
+          title: "Checkout Error",
+          description: "Failed to create checkout session. Please try again.",
+          variant: "destructive",
+        });
       }
-    } catch (error) {
-      console.error('Error creating checkout session:', error);
-      setMessage({
-        type: 'error',
-        text: 'There was an error creating your checkout session. Please try again.'
-      });
-      
-      toast({
-        title: "Checkout error",
-        description: "Failed to create checkout session. Please try again.",
-        variant: "destructive",
-      });
     } finally {
       setIsLoading(false);
     }

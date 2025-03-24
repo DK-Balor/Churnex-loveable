@@ -79,12 +79,9 @@ serve(async (req) => {
               .from('user_metadata')
               .update({
                 subscription_plan: plan,
-                subscription_status: subscription.status,
                 stripe_customer_id: session.customer,
                 stripe_subscription_id: subscriptionId,
-                trial_ends_at: isTrialing ? trialEndDate.toISOString() : null,
-                subscription_current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
-                subscription_cancel_at_period_end: subscription.cancel_at_period_end || false
+                trial_ends_at: isTrialing ? trialEndDate.toISOString() : null
               })
               .eq('id', userId);
             
@@ -123,9 +120,6 @@ serve(async (req) => {
         await supabaseClient
           .from('user_metadata')
           .update({
-            subscription_status: subscription.status,
-            subscription_current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
-            subscription_cancel_at_period_end: subscription.cancel_at_period_end,
             trial_ends_at: isTrialing ? trialEndDate.toISOString() : null
           })
           .eq('id', userId);
@@ -156,7 +150,6 @@ serve(async (req) => {
           .from('user_metadata')
           .update({
             subscription_plan: 'free', // Downgrade to free plan when canceled
-            subscription_status: 'canceled',
             trial_ends_at: null
           })
           .eq('id', userId);

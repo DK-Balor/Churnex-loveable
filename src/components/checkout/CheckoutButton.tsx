@@ -1,5 +1,6 @@
 
 import React from 'react';
+import { Loader2 } from 'lucide-react';
 
 interface CheckoutButtonProps {
   onClick: () => void;
@@ -15,13 +16,22 @@ const CheckoutButton: React.FC<CheckoutButtonProps> = ({ onClick, disabled, isLo
     <button
       onClick={onClick}
       disabled={disabled || isLoading}
-      className={`w-full py-4 rounded-md font-bold text-lg transition-colors ${
+      className={`w-full py-4 rounded-md font-bold text-lg transition-colors flex items-center justify-center ${
         isLoading || disabled
-          ? 'bg-gray-300 cursor-not-allowed'
+          ? 'bg-gray-300 cursor-not-allowed text-gray-500'
           : 'bg-brand-green text-white hover:bg-brand-green-600'
       }`}
     >
-      {isLoading ? 'Processing...' : isFree ? 'Activate Free Plan' : 'Continue to Checkout'}
+      {isLoading ? (
+        <>
+          <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+          Processing...
+        </>
+      ) : isFree ? (
+        'Activate Free Plan'
+      ) : (
+        'Continue to Checkout'
+      )}
     </button>
   );
 };
