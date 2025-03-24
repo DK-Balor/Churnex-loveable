@@ -7,6 +7,8 @@ interface Subscription {
   currentPeriodEnd: string;
   isCanceled: boolean;
   isTrialing: boolean;
+  accountType: string;
+  daysUntilExpiry: number | null;
 }
 
 // Function to get the current user's subscription
@@ -21,12 +23,24 @@ export const getCurrentSubscription = async (userId: string): Promise<Subscripti
 
     if (error) throw error;
 
+    // Calculate days until expiry for demo accounts
+    let daysUntilExpiry = null;
+    if (profile?.account_expires_at) {
+      const expiryDate = new Date(profile.account_expires_at);
+      const now = new Date();
+      const diffTime = expiryDate.getTime() - now.getTime();
+      daysUntilExpiry = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      if (daysUntilExpiry < 0) daysUntilExpiry = 0;
+    }
+
     return {
       status: profile?.subscription_status || (profile?.subscription_plan ? 'active' : 'inactive'),
       plan: profile?.subscription_plan || null, // Default to null if none is set
       currentPeriodEnd: profile?.trial_ends_at || new Date().toISOString(),
       isCanceled: profile?.subscription_status === 'canceled',
-      isTrialing: profile?.trial_ends_at && new Date(profile.trial_ends_at) > new Date()
+      isTrialing: profile?.trial_ends_at && new Date(profile.trial_ends_at) > new Date(),
+      accountType: profile?.account_type || 'demo',
+      daysUntilExpiry
     };
   } catch (error) {
     console.error('Error getting subscription:', error);
@@ -35,7 +49,9 @@ export const getCurrentSubscription = async (userId: string): Promise<Subscripti
       plan: null, // Default to null
       currentPeriodEnd: new Date().toISOString(),
       isCanceled: false,
-      isTrialing: false
+      isTrialing: false,
+      accountType: 'demo',
+      daysUntilExpiry: 30
     };
   }
 };
@@ -80,8 +96,19 @@ export const updatePaymentMethod = async (userId: string) => {
 };
 
 // Function to check if a user is in read-only mode (no active subscription)
-export const isReadOnlyUser = (userId: string) => {
-  return getCurrentSubscription(userId).then(subscription => {
-    return subscription.status !== 'active' || !subscription.plan;
-  });
+export const isReadOnlyUser = async (userId: string) => {
+  const subscription = await getCurrentSubscription(userId);
+  
+  // User is in read-only mode if:
+  // 1. They have no active subscription or trial (inactive/canceled status)
+  // 2. They are marked as a demo account
+  
+  // Trial accounts have access to paid features during trial period
+  if (subscription.isTrialing) return false;
+  
+  // Paid accounts have full access
+  if (subscription.status === 'active' && subscription.plan) return false;
+  
+  // Everyone else (demo accounts, expired trials, canceled subscriptions) is read-only
+  return true;
 };

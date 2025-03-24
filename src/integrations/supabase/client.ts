@@ -1,4 +1,3 @@
-
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 
@@ -73,6 +72,9 @@ export const signUpUser = async (email: string, password: string, fullName: stri
     
     console.log('User created:', data.user.id);
     
+    // Set account expiry to 30 days from now
+    const accountExpiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+    
     // Create the user profile
     await supabase.from('user_metadata').insert([{
       id: data.user.id,
@@ -80,7 +82,10 @@ export const signUpUser = async (email: string, password: string, fullName: stri
       business_name: businessName,
       trial_ends_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // 7-day trial
       last_login_at: new Date().toISOString(),
-      login_count: 1
+      login_count: 1,
+      account_type: 'demo', // Start as demo account
+      account_created_at: new Date().toISOString(),
+      account_expires_at: accountExpiresAt.toISOString() // Expires after 30 days
     }]);
     
     // Explicitly sign in immediately after signup to ensure we have a session

@@ -1,42 +1,29 @@
 
-import { defineConfig } from 'vite';
-import react from '@vitejs/plugin-react';
-import path from 'path';
-import { componentTagger } from "lovable-tagger";
+import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
+import path from 'path'
 
 // https://vitejs.dev/config/
-export default defineConfig(({ mode }) => ({
-  plugins: [
-    react(),
-    mode === 'development' && componentTagger(),
-  ].filter(Boolean),
+export default defineConfig({
+  plugins: [react()],
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
     },
   },
-  // Modified to fix build errors
   build: {
-    commonjsOptions: {
-      transformMixedEsModules: true,
-    },
-    target: 'es2015',
-    // Force Vite to ignore TypeScript errors when building
-    emptyOutDir: true,
     rollupOptions: {
       onwarn(warning, warn) {
-        // Suppress TypeScript project reference error
-        if (warning.code === 'TS6310') return;
+        // Suppress TS6310 error
+        if (
+          warning.code === 'PLUGIN_WARNING' && 
+          warning.message && 
+          warning.message.includes('TS6310')
+        ) {
+          return;
+        }
         warn(warning);
       }
     }
-  },
-  server: {
-    host: true,
-    port: 8080, // Set port to 8080 as required
-    allowedHosts: [
-      'de1a2121-ac1b-48af-b6bd-f70fda5830a0.lovableproject.com',
-      'localhost'
-    ],
-  },
-}));
+  }
+})

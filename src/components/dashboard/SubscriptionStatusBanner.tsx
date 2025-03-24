@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { CalendarDays, Lock } from 'lucide-react';
+import { CalendarDays, Lock, AlertTriangle } from 'lucide-react';
 import { UserProfile } from '../../types/auth';
 
 interface SubscriptionStatusBannerProps {
@@ -28,9 +28,23 @@ export default function SubscriptionStatusBanner({ profile }: SubscriptionStatus
     return diffDays > 0 ? diffDays : 0;
   };
 
+  // Calculate days until account expiration for demo accounts
+  const getDemoExpiryDays = () => {
+    if (!profile.account_expires_at) return null;
+    
+    const expiryDate = new Date(profile.account_expires_at);
+    const now = new Date();
+    const diffTime = expiryDate.getTime() - now.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    return diffDays > 0 ? diffDays : 0;
+  };
+
   const timeRemaining = getTimeRemaining();
+  const demoExpiryDays = getDemoExpiryDays();
   const isTrialing = profile?.trial_ends_at && new Date(profile.trial_ends_at) > new Date();
   const isActive = profile?.subscription_status === 'active';
+  const isDemo = profile.account_type === 'demo' || (!isActive && !isTrialing);
   
   // If user has an active paid subscription
   if (isActive && profile.subscription_plan) {
@@ -59,7 +73,7 @@ export default function SubscriptionStatusBanner({ profile }: SubscriptionStatus
           <div>
             <h3 className="font-medium text-blue-800">Trial Active</h3>
             <p className="text-sm text-blue-700">
-              Your trial ends in {timeRemaining} days
+              Your trial ends in {timeRemaining} days. After trial, your account will revert to demo mode.
             </p>
           </div>
         </div>
@@ -81,7 +95,10 @@ export default function SubscriptionStatusBanner({ profile }: SubscriptionStatus
         <div>
           <h3 className="font-medium text-amber-800">Demo Mode Active</h3>
           <p className="text-sm text-amber-700">
-            You're viewing a demo dashboard with limited features. Start your 7-day free trial to access all features.
+            This is a read-only demo account with limited features. 
+            {demoExpiryDays !== null && (
+              <span className="font-medium"> Free demo accounts are deleted after 30 days ({demoExpiryDays} days remaining).</span>
+            )}
           </p>
         </div>
       </div>

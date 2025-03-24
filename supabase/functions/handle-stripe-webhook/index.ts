@@ -92,7 +92,10 @@ serve(async (req) => {
                 subscription_status: subscription.status,
                 stripe_customer_id: session.customer,
                 stripe_subscription_id: subscriptionId,
-                trial_ends_at: isTrialing ? trialEndDate.toISOString() : null
+                trial_ends_at: isTrialing ? trialEndDate.toISOString() : null,
+                account_type: isTrialing ? 'trial' : 'paid', // Update account type
+                // Clear account expiry for paid accounts
+                account_expires_at: null
               })
               .eq('id', userId);
             
@@ -186,18 +189,28 @@ serve(async (req) => {
         
         // Check subscription status
         const isTrialing = subscription.status === 'trialing';
+        const isActive = subscription.status === 'active';
         const trialEndDate = isTrialing ? new Date(subscription.trial_end * 1000) : null;
+        
+        // Update subscription status and account type
+        const accountType = isTrialing ? 'trial' : (isActive ? 'paid' : 'demo');
+        
+        // If account is reverting to demo, set expiry date to 30 days from now
+        const accountExpiresAt = accountType === 'demo' ? 
+          new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() : null;
         
         // Update subscription status
         await supabaseClient
           .from('user_metadata')
           .update({
             subscription_status: subscription.status,
-            trial_ends_at: isTrialing ? trialEndDate.toISOString() : null
+            trial_ends_at: isTrialing ? trialEndDate.toISOString() : null,
+            account_type: accountType,
+            account_expires_at: accountExpiresAt
           })
           .eq('id', userId);
         
-        console.log(`Updated subscription status to ${subscription.status} for user ${userId}`);
+        console.log(`Updated subscription status to ${subscription.status} and account type to ${accountType} for user ${userId}`);
         break;
       }
       
@@ -219,17 +232,22 @@ serve(async (req) => {
         
         const userId = data.id;
         
-        // Mark subscription as canceled
+        // Mark subscription as canceled and revert to demo account
+        // Set account expiry date to 30 days from now
+        const accountExpiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+        
         await supabaseClient
           .from('user_metadata')
           .update({
             subscription_plan: 'free',
             subscription_status: 'canceled',
-            trial_ends_at: null
+            trial_ends_at: null,
+            account_type: 'demo',
+            account_expires_at: accountExpiresAt
           })
           .eq('id', userId);
         
-        console.log(`Subscription canceled for user ${userId}`);
+        console.log(`Subscription canceled for user ${userId}, reverted to demo account`);
         break;
       }
 
