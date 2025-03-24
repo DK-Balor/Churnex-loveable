@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase, sendVerificationEmail } from '../integrations/supabase/client';
@@ -41,6 +40,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // Check if email is confirmed
         if (session?.user) {
           setEmailConfirmed(session.user.email_confirmed_at !== null);
+          console.log('Email confirmed at:', session.user.email_confirmed_at);
         }
         
         setIsLoading(false);
@@ -100,6 +100,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Check if email is confirmed for existing session
       if (session?.user) {
         setEmailConfirmed(session.user.email_confirmed_at !== null);
+        console.log('Existing user email confirmed at:', session.user.email_confirmed_at);
       }
       
       setIsLoading(false);
@@ -253,7 +254,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             full_name: fullName,
             business_name: businessName
           },
-          emailRedirectTo: `${window.location.origin}/auth?verification=link`,
+          emailRedirectTo: 'https://churnex.lovable.app/auth',
           // Set session expiry to 24 hours
           expiresIn: 24 * 60 * 60
         }

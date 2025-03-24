@@ -40,7 +40,9 @@ function App() {
       <Router>
         <Routes>
           <Route path="/" element={<LandingPage />} />
+          {/* Make sure the auth route can handle both base path and potential code params */}
           <Route path="/auth" element={<AuthPage />} />
+          
           <Route 
             path="/checkout" 
             element={

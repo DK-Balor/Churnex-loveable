@@ -52,7 +52,7 @@ const AuthFormContent = () => {
   useEffect(() => {
     const code = searchParams.get('code');
     
-    // Handle link-based verification
+    // Handle code-based verification
     if (code) {
       console.log('Detected verification code in URL:', code);
       
@@ -60,25 +60,40 @@ const AuthFormContent = () => {
       const processVerificationCode = async () => {
         setIsLoading(true);
         try {
-          // The auth.exchangeCodeForSession method handles the code parameter
+          console.log('Processing verification code...');
           const { data, error } = await supabase.auth.exchangeCodeForSession(code);
           
           if (error) {
             console.error('Code verification failed:', error);
             setError(`Verification failed: ${error.message}`);
+            toast({
+              title: "Verification failed",
+              description: error.message,
+              variant: "destructive",
+            });
           } else {
             console.log('Code verification succeeded:', data);
             setEmailConfirmed(true);
             setSuccess('Email verified successfully! You can now sign in.');
+            toast({
+              title: "Email verified",
+              description: "Your email has been successfully verified. You can now log in.",
+            });
             
             // If user is already authenticated after verification, redirect to dashboard
             if (data?.session?.user) {
+              console.log('User authenticated after verification, redirecting to dashboard');
               setTimeout(() => navigate('/dashboard'), 1500);
             }
           }
         } catch (err: any) {
           console.error('Error processing verification code:', err);
           setError(`Verification error: ${err.message}`);
+          toast({
+            title: "Verification error",
+            description: err.message,
+            variant: "destructive",
+          });
         } finally {
           setIsLoading(false);
         }
@@ -86,7 +101,7 @@ const AuthFormContent = () => {
       
       processVerificationCode();
     }
-  }, [searchParams, setEmailConfirmed, navigate, setError, setSuccess, setIsLoading]);
+  }, [searchParams, setEmailConfirmed, navigate, setError, setSuccess, setIsLoading, toast]);
 
   // Use our validation hook
   const validation = useAuthFormValidation(

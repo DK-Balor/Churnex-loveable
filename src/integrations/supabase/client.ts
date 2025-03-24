@@ -18,7 +18,7 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseKey, {
     storage: localStorage,
     flowType: 'pkce',
     debug: true, // Enable this to see detailed auth logs
-    // Use the fixed site URL for redirects
+    // Use the fixed site URL for redirects without any query parameters
     redirectTo: `${SITE_URL}/auth`
   }
 });
@@ -50,24 +50,5 @@ export const sendVerificationEmail = async (email: string) => {
   } catch (error) {
     console.error('Exception sending verification email:', error);
     return { error: error as Error };
-  }
-};
-
-// Add a helper function to handle email verification using code from URL
-export const verifyEmailWithLink = async () => {
-  try {
-    console.log('Verifying email with link');
-    const { data, error } = await supabase.auth.getSession();
-    
-    if (error) {
-      console.error('Error verifying email with link:', error);
-      return { error, data: null };
-    }
-    
-    console.log('Email verification with link result:', data);
-    return { error: null, data };
-  } catch (error) {
-    console.error('Exception verifying email with link:', error);
-    return { error: error as Error, data: null };
   }
 };
