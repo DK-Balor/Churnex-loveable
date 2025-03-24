@@ -29,6 +29,9 @@ export type AuthContextType = {
     data: any;
   }>;
   signOut: () => Promise<void>;
+  verifyEmail: (email: string, token: string) => Promise<{
+    error: Error | null;
+  }>;
   resendVerificationEmail: (email: string) => Promise<{
     error: Error | null;
   }>;

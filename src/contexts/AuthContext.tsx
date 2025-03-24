@@ -170,6 +170,42 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const verifyEmail = async (email: string, token: string) => {
+    try {
+      const { error } = await supabase.auth.verifyOtp({
+        email,
+        token,
+        type: 'signup'
+      });
+      
+      if (error) {
+        console.error('Email verification error:', error);
+        toast({
+          title: "Verification failed",
+          description: error.message,
+          variant: "destructive",
+        });
+        return { error };
+      }
+      
+      setEmailConfirmed(true);
+      toast({
+        title: "Email verified",
+        description: "Your email has been successfully verified.",
+      });
+      
+      return { error: null };
+    } catch (error) {
+      console.error('Email verification exception:', error);
+      toast({
+        title: "Verification error",
+        description: "An unexpected error occurred during email verification.",
+        variant: "destructive",
+      });
+      return { error: error as Error };
+    }
+  };
+
   const resendVerificationEmail = async (email: string) => {
     try {
       const { error } = await supabase.auth.resend({
@@ -215,6 +251,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             full_name: fullName,
             business_name: businessName
           },
+          emailRedirectTo: window.location.origin + '/auth?verified=true',
           // Set session expiry to 24 hours
           expiresIn: 24 * 60 * 60
         }
@@ -280,6 +317,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     signUp,
     signOut,
     resendVerificationEmail,
+    verifyEmail,
     updateProfile
   };
 

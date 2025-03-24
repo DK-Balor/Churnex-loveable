@@ -1,6 +1,6 @@
 
-import React, { useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { AuthFormProvider, useAuthForm } from '../contexts/AuthFormContext';
 import SignInForm from '../components/auth/SignInForm';
@@ -9,6 +9,7 @@ import AuthStatusMessage from '../components/auth/AuthStatusMessage';
 import { useAuthFormValidation } from '../hooks/useAuthFormValidation';
 import { useToast } from '../components/ui/use-toast';
 import { MailCheck } from 'lucide-react';
+import VerificationCodeInput from '../components/auth/VerificationCodeInput';
 
 const AuthFormContent = () => {
   const { state, actions } = useAuthForm();
@@ -39,9 +40,19 @@ const AuthFormContent = () => {
     setBusinessNameTouched
   } = actions;
 
-  const { signIn, signUp, signOut, user, emailConfirmed, resendVerificationEmail } = useAuth();
+  const { signIn, signUp, signOut, user, emailConfirmed, resendVerificationEmail, verifyEmail } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const [searchParams] = useSearchParams();
+  const [showVerificationCodeInput, setShowVerificationCodeInput] = useState(false);
+
+  // Check if the user was redirected after clicking the verification link
+  useEffect(() => {
+    const verified = searchParams.get('verified');
+    if (verified === 'true') {
+      setSuccess('Email verified successfully! You can now sign in.');
+    }
+  }, [searchParams]);
 
   // Use our validation hook
   const validation = useAuthFormValidation(
@@ -63,6 +74,7 @@ const AuthFormContent = () => {
     setError(null);
     setSuccess(null);
     resetTouchedStates();
+    setShowVerificationCodeInput(false);
   }, [isLogin]);
 
   useEffect(() => {
@@ -81,6 +93,12 @@ const AuthFormContent = () => {
     setIsLoading(true);
     await resendVerificationEmail(email);
     setIsLoading(false);
+  };
+
+  const handleVerificationSuccess = () => {
+    setEmailConfirmed(true);
+    setSuccess('Email verified successfully! Redirecting to dashboard...');
+    // The useEffect will handle the redirect to dashboard
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -130,8 +148,9 @@ const AuthFormContent = () => {
         const { error } = await signUp(email, password, fullName, businessName);
         if (error) throw error;
         
-        // Show success message - the verification UI will be shown automatically
-        setSuccess('Account created successfully! Please check your email to verify your account.');
+        // Show verification code input after successful signup
+        setShowVerificationCodeInput(true);
+        setSuccess('Account created successfully! Please enter the verification code sent to your email.');
       }
     } catch (err: any) {
       console.error('Authentication error:', err);
@@ -140,6 +159,60 @@ const AuthFormContent = () => {
       setIsLoading(false);
     }
   };
+
+  // Show verification code input if the user just signed up
+  if (showVerificationCodeInput) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex flex-col justify-center">
+        <div className="sm:mx-auto sm:w-full sm:max-w-md mb-8">
+          <Link to="/" className="flex justify-center">
+            <h1 className="text-3xl font-bold text-brand-dark-800">
+              Churnex<span className="text-sm align-top">™</span>
+            </h1>
+          </Link>
+        </div>
+
+        <div className="sm:mx-auto sm:w-full sm:max-w-md">
+          <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
+            <div className="text-center mb-6">
+              <div className="flex justify-center mb-4">
+                <div className="h-12 w-12 rounded-full bg-brand-green-100 flex items-center justify-center">
+                  <MailCheck className="h-6 w-6 text-brand-green" />
+                </div>
+              </div>
+              <h2 className="text-2xl font-bold text-brand-dark-900">Verify your email</h2>
+            </div>
+            
+            <AuthStatusMessage />
+            
+            <VerificationCodeInput 
+              email={email} 
+              onVerificationSuccess={handleVerificationSuccess} 
+            />
+            
+            <div className="mt-4 text-center">
+              <button 
+                onClick={handleResendVerification} 
+                className="text-sm text-brand-green hover:text-brand-green-600 mr-4"
+              >
+                Resend code
+              </button>
+              <button 
+                onClick={() => {
+                  signOut();
+                  setShowVerificationCodeInput(false);
+                  setIsLogin(true);
+                }} 
+                className="text-sm text-brand-dark-500 hover:text-brand-dark-700"
+              >
+                Sign out
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // Show email verification UI if user exists but email is not confirmed
   if (user && !emailConfirmed) {
@@ -167,6 +240,8 @@ const AuthFormContent = () => {
                 Please check your inbox and click the verification link.
               </p>
             </div>
+            
+            <AuthStatusMessage />
             
             <div className="mt-4">
               <button
