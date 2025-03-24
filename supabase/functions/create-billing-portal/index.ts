@@ -1,0 +1,72 @@
+
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.4";
+import Stripe from "https://esm.sh/stripe@12.5.0";
+
+const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "");
+const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
+const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type",
+};
+
+serve(async (req) => {
+  // Handle CORS preflight requests
+  if (req.method === "OPTIONS") {
+    return new Response("ok", { headers: corsHeaders });
+  }
+
+  try {
+    // Create a Supabase client with the Auth context of the logged in user
+    const supabaseClient = createClient(supabaseUrl, supabaseKey);
+
+    // Get the authorization header from the request
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader) {
+      throw new Error("No authorization header");
+    }
+
+    // Get the request body
+    const { userId } = await req.json();
+
+    // Get the user's Stripe customer ID
+    const { data: userMetadata, error: metadataError } = await supabaseClient
+      .from("user_metadata")
+      .select("stripe_customer_id")
+      .eq("id", userId)
+      .single();
+
+    if (metadataError || !userMetadata?.stripe_customer_id) {
+      throw new Error("Customer not found");
+    }
+
+    // Create a billing portal session
+    const session = await stripe.billingPortal.sessions.create({
+      customer: userMetadata.stripe_customer_id,
+      return_url: `${req.headers.get("origin")}/dashboard/settings`,
+    });
+
+    return new Response(
+      JSON.stringify({
+        url: session.url,
+      }),
+      {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      }
+    );
+  } catch (error) {
+    console.error("Error in create-billing-portal function:", error);
+    
+    return new Response(
+      JSON.stringify({ error: error.message }),
+      {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      }
+    );
+  }
+});

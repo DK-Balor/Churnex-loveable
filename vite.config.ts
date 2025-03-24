@@ -27,6 +27,7 @@ export default defineConfig(({ mode }) => ({
     sourcemap: true,
   },
   optimizeDeps: {
+    exclude: ['tsconfig.node.json'], // Exclude the problematic file
     esbuildOptions: {
       // Fix for TypeScript configuration issues
       tsconfigRaw: {
@@ -34,7 +35,7 @@ export default defineConfig(({ mode }) => ({
           experimentalDecorators: true,
           importsNotUsedAsValues: 'remove',
           target: 'es2020',
-          skipLibCheck: true // Skip type checking of declaration files
+          skipLibCheck: true 
         }
       }
     }

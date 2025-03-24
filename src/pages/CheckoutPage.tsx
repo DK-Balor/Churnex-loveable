@@ -3,33 +3,53 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { getSubscriptionPlans, formatCurrency, createCheckoutSession, handleCheckoutSuccess } from '../utils/stripe';
+import { useToast } from '../components/ui/use-toast';
 
 export default function CheckoutPage() {
   const [searchParams] = useSearchParams();
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [plans, setPlans] = useState<any[]>([]);
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState<{type: 'success' | 'error', text: string} | null>(null);
 
-  // Check if this is a return from a checkout session
+  // Check if this is a return from a checkout session or if there was a cancellation
   const sessionId = searchParams.get('session_id');
+  const canceled = searchParams.get('canceled');
 
   useEffect(() => {
     const fetchPlans = async () => {
-      const plansData = await getSubscriptionPlans();
-      setPlans(plansData);
-      
-      // Set the default selected plan (Scale)
-      const defaultPlan = plansData.find(p => p.name === 'Scale');
-      if (defaultPlan) {
-        setSelectedPlan(defaultPlan.id);
+      try {
+        const plansData = await getSubscriptionPlans();
+        setPlans(plansData);
+        
+        // Set the default selected plan (Scale)
+        const defaultPlan = plansData.find(p => p.name === 'Scale');
+        if (defaultPlan) {
+          setSelectedPlan(defaultPlan.id);
+        }
+      } catch (error) {
+        console.error('Error fetching plans:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load subscription plans. Please refresh the page.",
+          variant: "destructive",
+        });
       }
     };
 
     fetchPlans();
-  }, []);
+
+    // Show message if checkout was canceled
+    if (canceled) {
+      setMessage({
+        type: 'error',
+        text: 'Checkout was canceled. Please try again when you're ready.'
+      });
+    }
+  }, [canceled, toast]);
 
   useEffect(() => {
     // Handle checkout success
@@ -44,16 +64,32 @@ export default function CheckoutPage() {
               text: `Successfully subscribed to the ${result.plan.charAt(0).toUpperCase() + result.plan.slice(1)} plan! Redirecting to dashboard...`
             });
             
+            toast({
+              title: "Subscription activated",
+              description: `You have successfully subscribed to the ${result.plan.charAt(0).toUpperCase() + result.plan.slice(1)} plan.`,
+            });
+            
             // Redirect to dashboard after 3 seconds
             setTimeout(() => {
               navigate('/dashboard');
             }, 3000);
+          } else {
+            setMessage({
+              type: 'error',
+              text: 'Subscription was not found. Please contact support if you believe this is an error.'
+            });
           }
         } catch (error) {
           console.error('Error processing checkout:', error);
           setMessage({
             type: 'error',
-            text: 'There was an error processing your subscription. Please try again.'
+            text: 'There was an error processing your subscription. Please try again or contact support.'
+          });
+          
+          toast({
+            title: "Checkout error",
+            description: "There was a problem processing your subscription.",
+            variant: "destructive",
           });
         } finally {
           setIsLoading(false);
@@ -62,34 +98,50 @@ export default function CheckoutPage() {
     };
 
     processCheckoutSuccess();
-  }, [sessionId, user, navigate]);
+  }, [sessionId, user, navigate, toast]);
 
   const handleSelectPlan = (planId: string) => {
     setSelectedPlan(planId);
   };
 
   const handleCheckout = async () => {
-    if (!selectedPlan || !user) return;
+    if (!selectedPlan || !user) {
+      toast({
+        title: "Error",
+        description: "Please select a plan to continue.",
+        variant: "destructive",
+      });
+      return;
+    }
     
     setIsLoading(true);
     try {
-      const { url } = await createCheckoutSession(selectedPlan, user.id);
+      const { url } = await createCheckoutSession(selectedPlan);
       
-      // In a real implementation, this would redirect to Stripe
-      // For our mock implementation, we'll redirect to the success URL directly
-      window.location.href = url;
+      if (url) {
+        // Redirect to Stripe Checkout
+        window.location.href = url;
+      } else {
+        throw new Error('No checkout URL returned');
+      }
     } catch (error) {
       console.error('Error creating checkout session:', error);
       setMessage({
         type: 'error',
         text: 'There was an error creating your checkout session. Please try again.'
       });
+      
+      toast({
+        title: "Checkout error",
+        description: "Failed to create checkout session. Please try again.",
+        variant: "destructive",
+      });
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Render a success message if we're returning from checkout
+  // Render a message if we're returning from checkout or if checkout was canceled
   if (message) {
     return (
       <div className="max-w-3xl mx-auto p-8">

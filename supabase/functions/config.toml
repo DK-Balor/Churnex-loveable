@@ -1,0 +1,5 @@
+
+project_id = "atobskmygodtszvfmtww"
+
+[global.env_variables]
+# Define environment variables that will be available to all functions

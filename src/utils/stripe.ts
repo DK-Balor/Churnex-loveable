@@ -1,7 +1,7 @@
 
 import { supabase } from '../integrations/supabase/client';
 
-// Function to simulate getting the Stripe subscription plans (this would be replaced with real Stripe API calls in production)
+// Function to get the Stripe subscription plans
 export const getSubscriptionPlans = async () => {
   return [
     {
@@ -61,8 +61,7 @@ export const formatCurrency = (amount: number, currency = 'usd') => {
 // Function to get the current user's subscription
 export const getCurrentSubscription = async (userId: string) => {
   try {
-    // In a real implementation, we would fetch the subscription from Supabase
-    // and then use the Stripe API to get more details if needed
+    // Fetch user's subscription data from Supabase
     const { data: profile, error } = await supabase
       .from('user_metadata')
       .select('*')
@@ -71,80 +70,103 @@ export const getCurrentSubscription = async (userId: string) => {
 
     if (error) throw error;
 
-    // Mock a subscription object based on profile data
-    // In production, this would come from a subscriptions table in Supabase
-    // that would be synced with Stripe webhooks
     return {
-      status: profile?.subscription_plan ? 'active' : 'none',
+      status: profile?.subscription_status || 'inactive',
       plan: profile?.subscription_plan || 'none',
-      currentPeriodEnd: profile?.trial_ends_at || new Date().toISOString(),
-      isCanceled: false
+      currentPeriodEnd: profile?.subscription_current_period_end || profile?.trial_ends_at || new Date().toISOString(),
+      isCanceled: profile?.subscription_cancel_at_period_end || false,
+      isTrialing: profile?.trial_ends_at && new Date(profile.trial_ends_at) > new Date()
     };
   } catch (error) {
     console.error('Error getting subscription:', error);
     return {
-      status: 'none',
+      status: 'inactive',
       plan: 'none',
       currentPeriodEnd: new Date().toISOString(),
-      isCanceled: false
+      isCanceled: false,
+      isTrialing: false
     };
   }
 };
 
-// Function to create a checkout session (mock for now)
-export const createCheckoutSession = async (priceId: string, customerId: string) => {
-  // In a real implementation, this would call a Supabase Edge Function
-  // that would create a Stripe checkout session and return the URL
-  return {
-    url: `/checkout-success?session_id=mock_session_${priceId}_${customerId}`
-  };
-};
+// Function to create a checkout session
+export const createCheckoutSession = async (priceId: string) => {
+  try {
+    // Call our Supabase Edge Function
+    const { data, error } = await supabase.functions.invoke('create-checkout', {
+      body: { 
+        priceId,
+        successUrl: window.location.origin + '/checkout-success',
+        cancelUrl: window.location.origin + '/checkout?canceled=true'
+      }
+    });
 
-// Function to handle successful checkout (mock for now)
-export const handleCheckoutSuccess = async (sessionId: string, userId: string) => {
-  // Extract the price ID from the mock session ID
-  const priceId = sessionId.split('_')[2];
-  
-  // Map price ID to plan name
-  let plan = 'none';
-  if (priceId === 'price_growth') plan = 'growth';
-  if (priceId === 'price_scale') plan = 'scale';
-  if (priceId === 'price_pro') plan = 'pro';
-  
-  // Update the user's subscription in the database
-  const { error } = await supabase
-    .from('user_metadata')
-    .update({
-      subscription_plan: plan,
-      trial_ends_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() // 30 days from now
-    })
-    .eq('id', userId);
-  
-  if (error) {
-    console.error('Error updating subscription:', error);
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error('Error creating checkout session:', error);
     throw error;
   }
-  
-  return { success: true, plan };
 };
 
-// Function to cancel a subscription (mock for now)
+// Function to handle successful checkout
+export const handleCheckoutSuccess = async (sessionId: string, userId: string) => {
+  try {
+    // With Stripe webhooks, this is handled automatically by the backend
+    // This function now mainly checks the current subscription status
+    const { data: profile, error } = await supabase
+      .from('user_metadata')
+      .select('subscription_plan')
+      .eq('id', userId)
+      .single();
+    
+    if (error) throw error;
+    
+    return { 
+      success: !!profile?.subscription_plan,
+      plan: profile?.subscription_plan || 'none'
+    };
+  } catch (error) {
+    console.error('Error verifying checkout:', error);
+    throw error;
+  }
+};
+
+// Function to cancel a subscription
 export const cancelSubscription = async (userId: string) => {
-  // In a real implementation, this would call a Supabase Edge Function
-  // that would cancel the subscription with Stripe
-  
-  // Update the user's subscription in the database to mark it as canceled
-  const { error } = await supabase
-    .from('user_metadata')
-    .update({
-      subscription_plan: null
-    })
-    .eq('id', userId);
-  
-  if (error) {
+  try {
+    // Call our Supabase Edge Function for cancellation
+    const { data, error } = await supabase.functions.invoke('cancel-subscription', {
+      body: { userId }
+    });
+
+    if (error) throw error;
+    
+    return data;
+  } catch (error) {
     console.error('Error canceling subscription:', error);
     throw error;
   }
-  
-  return { success: true };
+};
+
+// Function to update payment method
+export const updatePaymentMethod = async (userId: string) => {
+  try {
+    // Call Supabase Edge Function to create a billing portal session
+    const { data, error } = await supabase.functions.invoke('create-billing-portal', {
+      body: { userId }
+    });
+
+    if (error) throw error;
+    
+    // Redirect to the billing portal
+    if (data?.url) {
+      window.location.href = data.url;
+    }
+    
+    return data;
+  } catch (error) {
+    console.error('Error updating payment method:', error);
+    throw error;
+  }
 };
