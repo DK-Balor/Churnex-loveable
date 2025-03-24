@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -9,6 +8,7 @@ import {
   handleCheckoutSuccess,
   CheckoutError
 } from '../utils/stripe';
+import { supabase } from '../integrations/supabase/client';
 
 export interface CheckoutMessage {
   type: 'success' | 'error';
@@ -122,11 +122,15 @@ export const useCheckoutProcess = () => {
   }, [sessionId, user, toast, navigate]);
 
   const handleSelectPlan = (planId: string) => {
+    console.log('[CHECKOUT] Plan selected:', planId);
     setSelectedPlan(planId);
   };
 
   const handleCheckout = async () => {
+    console.log('[CHECKOUT] Checkout initiated');
+    
     if (!selectedPlan || !user) {
+      console.error('[CHECKOUT] Missing plan or user', { selectedPlan, user });
       toast({
         title: "Error",
         description: "Please select a plan to continue.",
@@ -139,38 +143,39 @@ export const useCheckoutProcess = () => {
     setMessage(null); // Clear any previous messages
     
     try {
-      console.log('Creating checkout session for plan:', selectedPlan);
-      console.log('User ID:', user.id);
-      console.log('User email:', user.email);
+      console.log('[CHECKOUT] Creating checkout session for plan:', selectedPlan);
+      console.log('[CHECKOUT] User ID:', user.id);
+      console.log('[CHECKOUT] User email:', user.email);
+      console.log('[CHECKOUT] Authentication token present:', !!supabase.auth.getSession());
       
       const { url } = await createCheckoutSession(selectedPlan);
       
       if (url) {
-        console.log('Redirecting to Stripe checkout URL:', url);
+        console.log('[CHECKOUT] Redirecting to Stripe checkout URL:', url);
         // Redirect to Stripe Checkout
         window.location.href = url;
       } else {
-        console.error('No checkout URL returned from createCheckoutSession');
+        console.error('[CHECKOUT] No checkout URL returned from createCheckoutSession');
         throw new CheckoutError('No checkout URL returned', 'no_checkout_url');
       }
     } catch (error) {
-      console.error('Error creating checkout session:', error);
+      console.error('[CHECKOUT] Error creating checkout session:', error);
       
       // Log detailed error information
       if (error instanceof CheckoutError) {
-        console.error('CheckoutError details:', {
+        console.error('[CHECKOUT] CheckoutError details:', {
           message: error.message,
           code: error.code,
           stack: error.stack
         });
       } else if (error instanceof Error) {
-        console.error('Error details:', {
+        console.error('[CHECKOUT] Error details:', {
           name: error.name,
           message: error.message,
           stack: error.stack
         });
       } else {
-        console.error('Unknown error type:', error);
+        console.error('[CHECKOUT] Unknown error type:', error);
       }
       
       let errorMessage = 'Failed to create checkout session. Please try again.';

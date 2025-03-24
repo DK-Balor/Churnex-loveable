@@ -14,6 +14,9 @@ const CheckoutButton: React.FC<CheckoutButtonProps> = ({ onClick, disabled, isLo
     console.log('Checkout button clicked with plan:', selectedPlan);
     console.log('Button state:', { disabled, isLoading });
     
+    // Add timestamp for tracking the flow
+    console.log('Checkout initiated at:', new Date().toISOString());
+    
     onClick();
   };
   
@@ -26,6 +29,7 @@ const CheckoutButton: React.FC<CheckoutButtonProps> = ({ onClick, disabled, isLo
           ? 'bg-gray-300 cursor-not-allowed text-gray-500'
           : 'bg-brand-green text-white hover:bg-brand-green-600 shadow-md hover:shadow-lg'
       }`}
+      data-testid="checkout-button"
     >
       {isLoading ? (
         <>

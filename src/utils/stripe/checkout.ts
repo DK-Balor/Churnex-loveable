@@ -1,4 +1,3 @@
-
 import { supabase } from '../../integrations/supabase/client';
 
 /**
@@ -60,14 +59,20 @@ const buildCheckoutPayload = (priceId: string) => {
  * @returns The response data
  */
 const invokeEdgeFunction = async <T>(functionName: string, payload: any): Promise<T> => {
-  console.log(`Invoking ${functionName} function with payload:`, payload);
+  console.log(`[${new Date().toISOString()}] Invoking ${functionName} function with payload:`, payload);
   
   try {
-    const { data, error, status } = await supabase.functions.invoke(functionName, {
+    console.log(`Calling supabase.functions.invoke('${functionName}')`);
+    const response = await supabase.functions.invoke(functionName, {
       body: payload
     });
     
+    console.log(`[${new Date().toISOString()}] ${functionName} raw response:`, response);
+    const { data, error, status } = response;
+    
     console.log(`${functionName} response status:`, status);
+    console.log(`${functionName} response data:`, data);
+    console.log(`${functionName} response error:`, error);
     
     // Check for non-2xx response status
     if (status < 200 || status >= 300) {
@@ -105,6 +110,8 @@ const invokeEdgeFunction = async <T>(functionName: string, payload: any): Promis
     console.log(`${functionName} returned data:`, data);
     return data as T;
   } catch (error) {
+    console.error(`[${new Date().toISOString()}] Error in invokeEdgeFunction:`, error);
+    
     if (error instanceof CheckoutError) {
       throw error;
     }
@@ -123,26 +130,34 @@ const invokeEdgeFunction = async <T>(functionName: string, payload: any): Promis
  * @returns The checkout session data with URL
  */
 export const createCheckoutSession = async (priceId: string): Promise<CheckoutSessionResponse> => {
-  console.log('Creating checkout session for price:', priceId);
+  console.log('[CHECKOUT] Creating checkout session for price:', priceId);
+  console.log('[CHECKOUT] Browser information:', {
+    userAgent: navigator.userAgent,
+    language: navigator.language,
+    platform: navigator.platform
+  });
   
   if (!priceId) {
     throw new CheckoutError('Price ID is required', 'invalid_price_id');
   }
   
   const payload = buildCheckoutPayload(priceId);
-  console.log('Built checkout payload:', payload);
+  console.log('[CHECKOUT] Built checkout payload:', payload);
   
   try {
+    console.log('[CHECKOUT] About to invoke create-checkout edge function');
     const data = await invokeEdgeFunction<CheckoutSessionResponse>('create-checkout', payload);
     
     if (!data.url) {
+      console.error('[CHECKOUT] No checkout URL returned from create-checkout function');
       throw new CheckoutError('No checkout URL returned', 'no_checkout_url');
     }
     
-    console.log('Checkout session created successfully with URL:', data.url);
+    console.log('[CHECKOUT] Checkout session created successfully with URL:', data.url);
+    console.log('[CHECKOUT] Session ID:', data.sessionId);
     return data;
   } catch (error) {
-    console.error('Error creating checkout session:', error);
+    console.error('[CHECKOUT] Error creating checkout session:', error);
     
     // Rethrow CheckoutError instances, wrap other errors
     if (error instanceof CheckoutError) {
