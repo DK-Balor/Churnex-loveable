@@ -1,7 +1,6 @@
-
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
-import { supabase } from '../integrations/supabase/client';
+import { supabase, SESSION_EXPIRY } from '../integrations/supabase/client';
 import { useToast } from '../components/ui/use-toast';
 
 type UserProfile = {
@@ -10,6 +9,9 @@ type UserProfile = {
   business_name: string | null;
   subscription_plan: string | null;
   trial_ends_at: string | null;
+  last_active_at?: string | null;
+  last_login_at?: string | null;
+  login_count?: number;
 };
 
 type AuthContextType = {
@@ -41,6 +43,53 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isLoading, setIsLoading] = useState(true);
   const [isProfileLoading, setIsProfileLoading] = useState(true);
   const { toast } = useToast();
+
+  // Check if the session has expired
+  const checkSessionExpiry = (currentSession: Session | null) => {
+    if (!currentSession) return false;
+    
+    // Get the creation time of the session
+    const createdAt = new Date(currentSession.created_at).getTime();
+    const now = new Date().getTime();
+    
+    // If more than SESSION_EXPIRY seconds have passed, the session has expired
+    return (now - createdAt) / 1000 > SESSION_EXPIRY;
+  };
+
+  // Update user's last activity timestamp
+  const updateUserActivity = async (userId: string) => {
+    try {
+      await supabase
+        .from('user_metadata')
+        .update({ last_active_at: new Date().toISOString() })
+        .eq('id', userId);
+    } catch (error) {
+      console.error('Failed to update user activity:', error);
+    }
+  };
+
+  // Track user login
+  const trackUserLogin = async (userId: string) => {
+    try {
+      const { data } = await supabase
+        .from('user_metadata')
+        .select('login_count')
+        .eq('id', userId)
+        .single();
+      
+      const currentCount = data?.login_count || 0;
+      
+      await supabase
+        .from('user_metadata')
+        .update({ 
+          last_login_at: new Date().toISOString(),
+          login_count: currentCount + 1
+        })
+        .eq('id', userId);
+    } catch (error) {
+      console.error('Failed to track user login:', error);
+    }
+  };
 
   // Fetch user profile
   useEffect(() => {
@@ -118,15 +167,38 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
         console.log('Auth state changed:', event, session?.user?.email);
+        
+        // Handle session expiry
+        if (session && checkSessionExpiry(session)) {
+          console.log('Session expired, signing out');
+          supabase.auth.signOut();
+          toast({
+            title: "Session expired",
+            description: "Your session has expired. Please sign in again.",
+            variant: "default",
+          });
+          return;
+        }
+        
         setSession(session);
         setUser(session?.user ?? null);
         setIsLoading(false);
+        
+        // Update user activity when session changes
+        if (session?.user) {
+          updateUserActivity(session.user.id);
+        }
         
         if (event === 'SIGNED_IN') {
           toast({
             title: "Welcome back!",
             description: `You're now signed in as ${session?.user?.email}`,
           });
+          
+          // Track login when user signs in
+          if (session?.user) {
+            trackUserLogin(session.user.id);
+          }
         } else if (event === 'SIGNED_OUT') {
           toast({
             title: "Signed out",
@@ -139,18 +211,59 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // THEN check for existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
       console.log('Existing session check:', session?.user?.email);
+      
+      // Check if the existing session has expired
+      if (session && checkSessionExpiry(session)) {
+        console.log('Existing session expired, signing out');
+        supabase.auth.signOut();
+        toast({
+          title: "Session expired",
+          description: "Your session has expired. Please sign in again.",
+          variant: "default",
+        });
+        return;
+      }
+      
       setSession(session);
       setUser(session?.user ?? null);
       setIsLoading(false);
+      
+      // Update user activity on initial load if user is logged in
+      if (session?.user) {
+        updateUserActivity(session.user.id);
+      }
     });
 
-    return () => subscription.unsubscribe();
-  }, []);
+    // Set up an interval to check for session expiry every minute
+    const checkInterval = setInterval(() => {
+      if (session && checkSessionExpiry(session)) {
+        console.log('Session expired during active use, signing out');
+        supabase.auth.signOut();
+        toast({
+          title: "Session expired",
+          description: "Your session has expired. Please sign in again.",
+          variant: "default",
+        });
+      }
+    }, 60 * 1000); // Check every minute
+
+    return () => {
+      subscription.unsubscribe();
+      clearInterval(checkInterval);
+    };
+  }, [session]);
 
   const signIn = async (email: string, password: string) => {
     try {
       console.log('Signing in user:', email);
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      const { error } = await supabase.auth.signInWithPassword({ 
+        email, 
+        password,
+        options: {
+          // Set session expiry to 24 hours
+          expiresIn: SESSION_EXPIRY
+        }
+      });
       
       if (error) {
         console.error('Sign in error:', error);
@@ -183,7 +296,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           data: {
             full_name: fullName,
             business_name: businessName
-          }
+          },
+          // Set session expiry to 24 hours
+          expiresIn: SESSION_EXPIRY
         }
       });
 
@@ -201,7 +316,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           id: response.data.user.id,
           full_name: fullName,
           business_name: businessName,
-          trial_ends_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString() // 7-day trial
+          trial_ends_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // 7-day trial
+          last_login_at: new Date().toISOString(),
+          login_count: 1
         }]);
         
         toast({
