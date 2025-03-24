@@ -10,6 +10,7 @@ import CustomersPage from './pages/CustomersPage';
 import SubscriptionsPage from './pages/SubscriptionsPage';
 import RecoveryPage from './pages/RecoveryPage';
 import ChurnPredictionPage from './pages/ChurnPredictionPage';
+import AnalyticsPage from './pages/AnalyticsPage';
 import SettingsPage from './pages/SettingsPage';
 import CheckoutPage from './pages/CheckoutPage';
 import CheckoutSuccessPage from './pages/CheckoutSuccessPage';
@@ -22,7 +23,10 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <p className="text-gray-600">Loading...</p>
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-green mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading...</p>
+        </div>
       </div>
     );
   }
@@ -73,6 +77,7 @@ function App() {
             <Route path="subscriptions" element={<SubscriptionsPage />} />
             <Route path="recovery" element={<RecoveryPage />} />
             <Route path="churn-prediction" element={<ChurnPredictionPage />} />
+            <Route path="analytics" element={<AnalyticsPage />} />
             <Route path="settings" element={<SettingsPage />} />
           </Route>
           

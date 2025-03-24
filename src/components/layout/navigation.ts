@@ -6,7 +6,8 @@ import {
   RefreshCw, 
   AlertTriangle,
   Settings, 
-  Home
+  Home,
+  LineChart
 } from 'lucide-react';
 import { NavigationItem } from './types';
 
@@ -16,5 +17,6 @@ export const dashboardNavigation: NavigationItem[] = [
   { name: 'Subscriptions', href: '/dashboard/subscriptions', icon: Clock },
   { name: 'Recovery', href: '/dashboard/recovery', icon: RefreshCw },
   { name: 'Churn Prediction', href: '/dashboard/churn-prediction', icon: AlertTriangle },
+  { name: 'Analytics', href: '/dashboard/analytics', icon: LineChart },
   { name: 'Settings', href: '/dashboard/settings', icon: Settings },
 ];
