@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.4";
 import Stripe from "https://esm.sh/stripe@12.5.0";
@@ -41,6 +42,7 @@ async function ensureProductsAndPrices() {
   try {
     // For each product config
     for (const [planId, config] of Object.entries(productConfig)) {
+      // Define the lookup key for the price
       const priceId = `price_${planId}`;
       
       // Check if price already exists
@@ -115,14 +117,38 @@ serve(async (req) => {
 
     // Get the request body
     const { priceId, successUrl, cancelUrl } = await req.json();
+    
+    console.log(`Received checkout request for priceId: ${priceId}`);
 
-    // Make sure the requested priceId is valid
-    if (!priceId.startsWith('price_') && priceId !== 'free') {
-      throw new Error(`Invalid price ID: ${priceId}`);
+    // Make sure we have a valid priceId format
+    if (!priceId) {
+      throw new Error("Missing priceId parameter");
     }
 
-    // Ensure all products and prices exist
+    // Ensure all products and prices exist in Stripe
     await ensureProductsAndPrices();
+    
+    // Extract the plan name from the priceId (e.g., "price_growth" -> "growth")
+    const planName = priceId.replace('price_', '');
+    
+    // Verify the plan exists in our config
+    if (!productConfig[planName]) {
+      throw new Error(`Unknown plan: ${planName}`);
+    }
+
+    // Look up the price in Stripe using the lookup_key
+    const prices = await stripe.prices.list({
+      lookup_keys: [priceId],
+      active: true,
+      limit: 1,
+    });
+
+    if (prices.data.length === 0) {
+      throw new Error(`Price not found for lookup key: ${priceId}`);
+    }
+
+    const price = prices.data[0];
+    console.log(`Found price: ${price.id} for lookup key: ${priceId}`);
 
     // Get user metadata to include their business name in Stripe
     const { data: userMetadata, error: metadataError } = await supabaseClient
@@ -165,7 +191,7 @@ serve(async (req) => {
       payment_method_types: ["card"],
       line_items: [
         {
-          price: priceId,
+          price: price.id,
           quantity: 1,
         },
       ],

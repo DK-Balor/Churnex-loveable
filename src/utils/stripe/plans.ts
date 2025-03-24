@@ -14,7 +14,7 @@ export interface Plan {
 export const getSubscriptionPlans = async (): Promise<Plan[]> => {
   return [
     {
-      id: 'price_growth',
+      id: 'price_growth', // These IDs must match the lookup_key in Stripe
       name: 'Growth',
       price: 49,
       currency: 'gbp',
@@ -28,7 +28,7 @@ export const getSubscriptionPlans = async (): Promise<Plan[]> => {
       ]
     },
     {
-      id: 'price_scale',
+      id: 'price_scale', // These IDs must match the lookup_key in Stripe
       name: 'Scale',
       price: 99,
       currency: 'gbp',
@@ -42,7 +42,7 @@ export const getSubscriptionPlans = async (): Promise<Plan[]> => {
       ]
     },
     {
-      id: 'price_pro',
+      id: 'price_pro', // These IDs must match the lookup_key in Stripe
       name: 'Pro',
       price: 199,
       currency: 'gbp',

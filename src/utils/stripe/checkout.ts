@@ -4,10 +4,13 @@ import { supabase } from '../../integrations/supabase/client';
 // Function to create a checkout session
 export const createCheckoutSession = async (priceId: string) => {
   try {
+    // Make sure the priceId is in the expected format for the edge function
+    const formattedPriceId = priceId.startsWith('price_') ? priceId : priceId;
+    
     // Call our Supabase Edge Function
     const { data, error } = await supabase.functions.invoke('create-checkout', {
       body: { 
-        priceId,
+        priceId: formattedPriceId,
         successUrl: window.location.origin + '/checkout-success',
         cancelUrl: window.location.origin + '/checkout?cancelled=true'
       }
