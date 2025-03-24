@@ -1,13 +1,11 @@
 
 import React from 'react';
 import { CheckCircle, AlertCircle } from 'lucide-react';
+import { useAuthForm } from '../../contexts/AuthFormContext';
 
-type AuthStatusMessageProps = {
-  error: string | null;
-  success: string | null;
-};
-
-const AuthStatusMessage: React.FC<AuthStatusMessageProps> = ({ error, success }) => {
+const AuthStatusMessage: React.FC = () => {
+  const { state: { error, success } } = useAuthForm();
+  
   if (!error && !success) return null;
   
   return (

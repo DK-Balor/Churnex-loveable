@@ -1,36 +1,40 @@
 
 import React from 'react';
+import { useAuthForm } from '../../contexts/AuthFormContext';
+import { useAuthFormValidation } from '../../hooks/useAuthFormValidation';
 import AuthInput from './AuthInput';
+import { Checkbox } from '../ui/checkbox';
+import { Label } from '../ui/label';
 
-type SignInFormProps = {
-  email: string;
-  setEmail: (email: string) => void;
-  password: string;
-  setPassword: (password: string) => void;
-  emailTouched: boolean;
-  setEmailTouched: (touched: boolean) => void;
-  passwordTouched: boolean;
-  setPasswordTouched: (touched: boolean) => void;
-  emailError: string | null;
-  passwordError: string | null;
-  rememberMe: boolean;
-  setRememberMe: (rememberMe: boolean) => void;
-};
+const SignInForm: React.FC = () => {
+  const { state, actions } = useAuthForm();
+  const { 
+    email, 
+    setEmail, 
+    password, 
+    setPassword, 
+    emailTouched, 
+    setEmailTouched, 
+    passwordTouched, 
+    setPasswordTouched,
+    rememberMe,
+    setRememberMe
+  } = { ...state, ...actions };
 
-const SignInForm: React.FC<SignInFormProps> = ({
-  email,
-  setEmail,
-  password,
-  setPassword,
-  emailTouched,
-  setEmailTouched,
-  passwordTouched,
-  setPasswordTouched,
-  emailError,
-  passwordError,
-  rememberMe,
-  setRememberMe,
-}) => {
+  const validation = useAuthFormValidation(
+    true, // isLogin
+    email,
+    password,
+    '', // confirmPassword
+    '', // fullName
+    '', // businessName
+    emailTouched,
+    passwordTouched,
+    false, // confirmPasswordTouched
+    false, // fullNameTouched
+    false // businessNameTouched
+  );
+
   return (
     <>
       <AuthInput
@@ -40,7 +44,7 @@ const SignInForm: React.FC<SignInFormProps> = ({
         value={email}
         onChange={(e) => setEmail(e.target.value)}
         onBlur={() => setEmailTouched(true)}
-        error={emailError}
+        error={validation.emailError}
         label="Email address"
         placeholder="your.email@example.com"
         autoComplete="email"
@@ -53,24 +57,24 @@ const SignInForm: React.FC<SignInFormProps> = ({
         value={password}
         onChange={(e) => setPassword(e.target.value)}
         onBlur={() => setPasswordTouched(true)}
-        error={passwordError}
+        error={validation.passwordError}
         label="Password"
         autoComplete="current-password"
       />
 
       <div className="flex items-center justify-between">
-        <div className="flex items-center">
-          <input
-            id="remember-me"
-            name="remember-me"
-            type="checkbox"
+        <div className="flex items-center space-x-2">
+          <Checkbox 
+            id="remember-me" 
             checked={rememberMe}
-            onChange={(e) => setRememberMe(e.target.checked)}
-            className="h-4 w-4 text-brand-green focus:ring-brand-green border-gray-300 rounded"
+            onCheckedChange={(checked) => setRememberMe(checked === true)} 
           />
-          <label htmlFor="remember-me" className="ml-2 block text-sm text-brand-dark-700">
+          <Label 
+            htmlFor="remember-me" 
+            className="text-sm text-brand-dark-700 cursor-pointer"
+          >
             Remember me
-          </label>
+          </Label>
         </div>
 
         <div className="text-sm">

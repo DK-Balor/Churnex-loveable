@@ -1,33 +1,46 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { AuthFormProvider, useAuthForm } from '../contexts/AuthFormContext';
 import SignInForm from '../components/auth/SignInForm';
 import SignUpForm from '../components/auth/SignUpForm';
 import AuthStatusMessage from '../components/auth/AuthStatusMessage';
 import { useAuthFormValidation } from '../hooks/useAuthFormValidation';
+import { useToast } from '../components/ui/use-toast';
 
-export default function AuthPage() {
-  const [isLogin, setIsLogin] = useState(true);
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [fullName, setFullName] = useState('');
-  const [businessName, setBusinessName] = useState('');
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [rememberMe, setRememberMe] = useState(false);
+const AuthFormContent = () => {
+  const { state, actions } = useAuthForm();
+  const { 
+    isLogin, 
+    email, 
+    password,
+    confirmPassword,
+    fullName, 
+    businessName,
+    emailTouched,
+    passwordTouched,
+    confirmPasswordTouched,
+    fullNameTouched,
+    businessNameTouched
+  } = state;
   
-  // Form validation states
-  const [emailTouched, setEmailTouched] = useState(false);
-  const [passwordTouched, setPasswordTouched] = useState(false);
-  const [confirmPasswordTouched, setConfirmPasswordTouched] = useState(false);
-  const [fullNameTouched, setFullNameTouched] = useState(false);
-  const [businessNameTouched, setBusinessNameTouched] = useState(false);
-  
+  const { 
+    setIsLogin, 
+    setError, 
+    setSuccess, 
+    setIsLoading,
+    resetTouchedStates,
+    setEmailTouched,
+    setPasswordTouched,
+    setConfirmPasswordTouched,
+    setFullNameTouched,
+    setBusinessNameTouched
+  } = actions;
+
   const { signIn, signUp, user } = useAuth();
   const navigate = useNavigate();
+  const { toast } = useToast();
 
   // Use our validation hook
   const validation = useAuthFormValidation(
@@ -48,13 +61,7 @@ export default function AuthPage() {
     // Clear error when switching between login and signup
     setError(null);
     setSuccess(null);
-    
-    // Reset touched states when switching
-    setEmailTouched(false);
-    setPasswordTouched(false);
-    setConfirmPasswordTouched(false);
-    setFullNameTouched(false);
-    setBusinessNameTouched(false);
+    resetTouchedStates();
   }, [isLogin]);
 
   useEffect(() => {
@@ -92,7 +99,11 @@ export default function AuthPage() {
         
         // Show success message
         setSuccess('Login successful! Redirecting to dashboard...');
-        
+        toast({
+          title: "Login successful",
+          description: "Redirecting to dashboard...",
+          variant: "default",
+        });
         // Redirect will happen automatically from AuthContext useEffect
       } else {
         // Handle signup
@@ -109,6 +120,11 @@ export default function AuthPage() {
         
         // Show success message
         setSuccess('Account created successfully! You can now log in.');
+        toast({
+          title: "Account created",
+          description: "You can now log in with your credentials.",
+          variant: "default",
+        });
         
         // Switch to login view after successful signup
         setTimeout(() => {
@@ -119,11 +135,16 @@ export default function AuthPage() {
     } catch (err: any) {
       console.error('Authentication error:', err);
       setError(err.message || 'An error occurred during authentication');
+      toast({
+        title: "Authentication error",
+        description: err.message || 'An error occurred during authentication',
+        variant: "destructive",
+      });
     } finally {
       setIsLoading(false);
     }
   };
-
+  
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col justify-center">
       <div className="sm:mx-auto sm:w-full sm:max-w-md mb-8">
@@ -143,10 +164,7 @@ export default function AuthPage() {
             <p className="mt-2 text-center text-sm text-brand-dark-500">
               {isLogin ? "Don't have an account? " : "Already have an account? "}
               <button
-                onClick={() => {
-                  setIsLogin(!isLogin);
-                  setError(null);
-                }}
+                onClick={() => setIsLogin(!isLogin)}
                 className="font-medium text-brand-green hover:text-brand-green-600"
               >
                 {isLogin ? 'Create one now' : 'Sign in'}
@@ -154,65 +172,22 @@ export default function AuthPage() {
             </p>
           </div>
 
-          <AuthStatusMessage error={error} success={success} />
+          <AuthStatusMessage />
 
           <form className="space-y-6" onSubmit={handleSubmit}>
-            {isLogin ? (
-              <SignInForm 
-                email={email}
-                setEmail={setEmail}
-                password={password}
-                setPassword={setPassword}
-                emailTouched={emailTouched}
-                setEmailTouched={setEmailTouched}
-                passwordTouched={passwordTouched}
-                setPasswordTouched={setPasswordTouched}
-                emailError={validation.emailError}
-                passwordError={validation.passwordError}
-                rememberMe={rememberMe}
-                setRememberMe={setRememberMe}
-              />
-            ) : (
-              <SignUpForm
-                email={email}
-                setEmail={setEmail}
-                password={password}
-                setPassword={setPassword}
-                confirmPassword={confirmPassword}
-                setConfirmPassword={setConfirmPassword}
-                fullName={fullName}
-                setFullName={setFullName}
-                businessName={businessName}
-                setBusinessName={setBusinessName}
-                emailTouched={emailTouched}
-                setEmailTouched={setEmailTouched}
-                passwordTouched={passwordTouched}
-                setPasswordTouched={setPasswordTouched}
-                confirmPasswordTouched={confirmPasswordTouched}
-                setConfirmPasswordTouched={setConfirmPasswordTouched}
-                fullNameTouched={fullNameTouched}
-                setFullNameTouched={setFullNameTouched}
-                businessNameTouched={businessNameTouched}
-                setBusinessNameTouched={setBusinessNameTouched}
-                emailError={validation.emailError}
-                passwordError={validation.passwordError}
-                confirmPasswordError={validation.confirmPasswordError}
-                fullNameError={validation.fullNameError}
-                businessNameError={validation.businessNameError}
-              />
-            )}
+            {isLogin ? <SignInForm /> : <SignUpForm />}
 
             <div>
               <button
                 type="submit"
-                disabled={isLoading || !validation.formIsValid}
+                disabled={state.isLoading || !validation.formIsValid}
                 className={`w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white transition-colors duration-300 ${
-                  isLoading || !validation.formIsValid
+                  state.isLoading || !validation.formIsValid
                     ? 'bg-brand-green-300 cursor-not-allowed'
                     : 'bg-brand-green hover:bg-brand-green-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-green'
                 }`}
               >
-                {isLoading
+                {state.isLoading
                   ? 'Processing...'
                   : isLogin
                   ? 'Sign in'
@@ -239,5 +214,13 @@ export default function AuthPage() {
         </div>
       </div>
     </div>
+  );
+};
+
+export default function AuthPage() {
+  return (
+    <AuthFormProvider>
+      <AuthFormContent />
+    </AuthFormProvider>
   );
 }

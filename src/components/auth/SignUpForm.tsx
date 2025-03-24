@@ -1,62 +1,48 @@
 
 import React from 'react';
+import { useAuthForm } from '../../contexts/AuthFormContext';
+import { useAuthFormValidation } from '../../hooks/useAuthFormValidation';
 import AuthInput from './AuthInput';
 
-type SignUpFormProps = {
-  email: string;
-  setEmail: (email: string) => void;
-  password: string;
-  setPassword: (password: string) => void;
-  confirmPassword: string;
-  setConfirmPassword: (confirmPassword: string) => void;
-  fullName: string;
-  setFullName: (fullName: string) => void;
-  businessName: string;
-  setBusinessName: (businessName: string) => void;
-  emailTouched: boolean;
-  setEmailTouched: (touched: boolean) => void;
-  passwordTouched: boolean;
-  setPasswordTouched: (touched: boolean) => void;
-  confirmPasswordTouched: boolean;
-  setConfirmPasswordTouched: (touched: boolean) => void;
-  fullNameTouched: boolean;
-  setFullNameTouched: (touched: boolean) => void;
-  businessNameTouched: boolean;
-  setBusinessNameTouched: (touched: boolean) => void;
-  emailError: string | null;
-  passwordError: string | null;
-  confirmPasswordError: string | null;
-  fullNameError: string | null;
-  businessNameError: string | null;
-};
+const SignUpForm: React.FC = () => {
+  const { state, actions } = useAuthForm();
+  const { 
+    email, 
+    setEmail, 
+    password, 
+    setPassword,
+    confirmPassword,
+    setConfirmPassword,
+    fullName,
+    setFullName,
+    businessName,
+    setBusinessName,
+    emailTouched, 
+    setEmailTouched, 
+    passwordTouched, 
+    setPasswordTouched,
+    confirmPasswordTouched,
+    setConfirmPasswordTouched,
+    fullNameTouched,
+    setFullNameTouched,
+    businessNameTouched,
+    setBusinessNameTouched
+  } = { ...state, ...actions };
 
-const SignUpForm: React.FC<SignUpFormProps> = ({
-  email,
-  setEmail,
-  password,
-  setPassword,
-  confirmPassword,
-  setConfirmPassword,
-  fullName,
-  setFullName,
-  businessName,
-  setBusinessName,
-  emailTouched,
-  setEmailTouched,
-  passwordTouched,
-  setPasswordTouched,
-  confirmPasswordTouched,
-  setConfirmPasswordTouched,
-  fullNameTouched,
-  setFullNameTouched,
-  businessNameTouched,
-  setBusinessNameTouched,
-  emailError,
-  passwordError,
-  confirmPasswordError,
-  fullNameError,
-  businessNameError,
-}) => {
+  const validation = useAuthFormValidation(
+    false, // isLogin
+    email,
+    password,
+    confirmPassword,
+    fullName,
+    businessName,
+    emailTouched,
+    passwordTouched,
+    confirmPasswordTouched,
+    fullNameTouched,
+    businessNameTouched
+  );
+
   return (
     <>
       <AuthInput
@@ -66,7 +52,7 @@ const SignUpForm: React.FC<SignUpFormProps> = ({
         value={fullName}
         onChange={(e) => setFullName(e.target.value)}
         onBlur={() => setFullNameTouched(true)}
-        error={fullNameError}
+        error={validation.fullNameError}
         label="Full Name"
         placeholder="John Doe"
       />
@@ -78,7 +64,7 @@ const SignUpForm: React.FC<SignUpFormProps> = ({
         value={businessName}
         onChange={(e) => setBusinessName(e.target.value)}
         onBlur={() => setBusinessNameTouched(true)}
-        error={businessNameError}
+        error={validation.businessNameError}
         label="Business Name"
         placeholder="Acme Inc."
       />
@@ -90,7 +76,7 @@ const SignUpForm: React.FC<SignUpFormProps> = ({
         value={email}
         onChange={(e) => setEmail(e.target.value)}
         onBlur={() => setEmailTouched(true)}
-        error={emailError}
+        error={validation.emailError}
         label="Email address"
         placeholder="your.email@example.com"
         autoComplete="email"
@@ -103,7 +89,7 @@ const SignUpForm: React.FC<SignUpFormProps> = ({
         value={password}
         onChange={(e) => setPassword(e.target.value)}
         onBlur={() => setPasswordTouched(true)}
-        error={passwordError}
+        error={validation.passwordError}
         label="Password"
         autoComplete="new-password"
       />
@@ -115,7 +101,7 @@ const SignUpForm: React.FC<SignUpFormProps> = ({
         value={confirmPassword}
         onChange={(e) => setConfirmPassword(e.target.value)}
         onBlur={() => setConfirmPasswordTouched(true)}
-        error={confirmPasswordError}
+        error={validation.confirmPasswordError}
         label="Confirm Password"
         autoComplete="new-password"
       />
