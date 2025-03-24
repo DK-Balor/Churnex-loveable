@@ -43,22 +43,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           updateUserActivity(session.user.id);
         }
         
-        if (event === 'SIGNED_IN') {
-          toast({
-            title: "Welcome!",
-            description: `You're now signed in as ${session?.user?.email}`,
-          });
-          
-          // Track login when user signs in
-          if (session?.user) {
-            trackUserLogin(session.user.id);
-          }
-        } else if (event === 'SIGNED_OUT') {
-          toast({
-            title: "Signed out",
-            description: "You have been signed out successfully.",
-          });
-        }
+        // We're not showing login toast here anymore, it will be handled during specific actions
       }
     );
 
@@ -126,6 +111,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           description: error.message,
           variant: "destructive",
         });
+      } else {
+        // Only show a single welcome toast
+        toast({
+          title: "Welcome back!",
+          description: `You're now signed in as ${email}`,
+        });
       }
       
       return { error, data };
@@ -158,6 +149,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       } 
       
       console.log('Signup successful, user should be logged in automatically');
+      // Show only one toast for account creation
       toast({
         title: "Account created",
         description: "Your account has been created and you are now logged in.",
@@ -178,6 +170,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signOut = async () => {
     try {
       await supabase.auth.signOut();
+      toast({
+        title: "Signed out",
+        description: "You have been signed out successfully.",
+      });
     } catch (error) {
       console.error('Sign out error:', error);
       toast({

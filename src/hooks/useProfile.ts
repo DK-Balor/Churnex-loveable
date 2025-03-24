@@ -54,10 +54,8 @@ export const useProfile = (user: User | null) => {
               });
             } else {
               setProfile(newProfile);
-              toast({
-                title: "Profile created",
-                description: "Your account has been set up successfully.",
-              });
+              // We're removing this toast to avoid duplicate notifications
+              // Toast is already shown in AuthContext during signup
             }
           } else {
             console.error('Error fetching user profile:', error);
