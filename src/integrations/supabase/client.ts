@@ -8,13 +8,23 @@ const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS
 // Session expiry in seconds (24 hours)
 export const SESSION_EXPIRY = 24 * 60 * 60;
 
+// Get the current site URL - works in both development and production
+const getSiteUrl = () => {
+  // Don't use localhost in the URL - use the actual domain or IP
+  const url = window.location.origin;
+  console.log('Current site URL:', url);
+  return url;
+};
+
 export const supabase = createClient<Database>(supabaseUrl, supabaseKey, {
   auth: {
     persistSession: true,
     autoRefreshToken: true,
     storage: localStorage,
     flowType: 'pkce',
-    debug: true // Enable this to see detailed auth logs
+    debug: true, // Enable this to see detailed auth logs
+    // Use the site URL for redirects to avoid localhost issues
+    redirectTo: `${getSiteUrl()}/auth?verification=link`
   }
 });
 
@@ -23,7 +33,7 @@ export const sendVerificationEmail = async (email: string) => {
   try {
     console.log('Sending verification email to:', email);
     
-    const redirectUrl = window.location.origin + '/auth?verification=link';
+    const redirectUrl = `${getSiteUrl()}/auth?verification=link`;
     console.log('Using redirect URL:', redirectUrl);
     
     // Use signInWithOtp instead of signUp for more reliable email delivery
