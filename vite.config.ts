@@ -47,37 +47,41 @@ export default defineConfig(({ mode }) => ({
       extensions: ['.js', '.jsx', '.ts', '.tsx']
     }
   },
-  // Override the project references for tsconfig.node.json
-  // This is the key fix for the TS6310 error
+  // Essential fix for TS6310 error - override the referenced tsconfig.node.json settings
   optimizeDeps: {
     esbuildOptions: {
       target: 'es2020',
-      // Override tsconfig settings for build time
-      tsconfigRaw: JSON.stringify({
-        compilerOptions: {
-          experimentalDecorators: true,
-          target: 'es2020',
-          useDefineForClassFields: true,
-          module: 'esnext',
-          moduleResolution: 'node',
-          isolatedModules: true,
-          noEmit: false, // Explicitly override noEmit
-          jsx: 'react-jsx',
-          skipLibCheck: true
+      // Override tsconfig settings for build time with stringified JSON
+      tsconfigRaw: `{
+        "compilerOptions": {
+          "experimentalDecorators": true,
+          "target": "es2020",
+          "useDefineForClassFields": true,
+          "module": "esnext",
+          "moduleResolution": "node",
+          "isolatedModules": true,
+          "noEmit": false,
+          "jsx": "react-jsx",
+          "skipLibCheck": true,
+          "allowSyntheticDefaultImports": true,
+          "esModuleInterop": true
         }
-      })
+      }`
     }
   },
   esbuild: {
     target: 'es2020',
-    // Enhanced TypeScript support
-    tsconfigRaw: JSON.stringify({
-      compilerOptions: {
-        target: 'es2020',
-        module: 'esnext',
-        noEmit: false, // Explicitly override noEmit
-        jsx: 'react-jsx'
+    // Use raw string syntax instead of JSON.stringify for better control
+    tsconfigRaw: `{
+      "compilerOptions": {
+        "target": "es2020",
+        "module": "esnext",
+        "noEmit": false,
+        "jsx": "react-jsx",
+        "isolatedModules": true,
+        "skipLibCheck": true,
+        "allowSyntheticDefaultImports": true
       }
-    })
+    }`
   }
 }));
