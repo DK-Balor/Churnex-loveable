@@ -147,11 +147,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // Handle specific error for unverified email
         if (error.message.includes('Email not confirmed')) {
           setEmailConfirmed(false);
-          toast({
-            title: "Email not verified",
-            description: "Please check your inbox and verify your email address, or request a new verification email.",
-            variant: "destructive",
-          });
+          // Don't show toast here since we'll show the verification UI instead
           // Return the user even though there was an error
           return { error, emailVerificationNeeded: true };
         }
@@ -246,10 +242,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           login_count: 1
         }]);
         
-        toast({
-          title: "Account created",
-          description: "Your account has been created successfully! Please check your email to verify your account.",
-        });
+        // No toast here as we'll show the verification UI directly
       }
 
       return { error: response.error, data: response.data };

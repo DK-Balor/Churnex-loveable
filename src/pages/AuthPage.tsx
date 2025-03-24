@@ -39,7 +39,7 @@ const AuthFormContent = () => {
     setBusinessNameTouched
   } = actions;
 
-  const { signIn, signUp, user, emailConfirmed, resendVerificationEmail } = useAuth();
+  const { signIn, signUp, signOut, user, emailConfirmed, resendVerificationEmail } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -112,15 +112,10 @@ const AuthFormContent = () => {
           throw error;
         }
         
-        if (!error) {
-          // Show success message
+        // If emailVerificationNeeded, we'll show the verification UI via useEffect
+        if (!error && !emailVerificationNeeded) {
+          // Only show success message if email is verified
           setSuccess('Login successful! Redirecting to dashboard...');
-          toast({
-            title: "Login successful",
-            description: "Redirecting to dashboard...",
-            variant: "default",
-          });
-          // Redirect will happen automatically from AuthContext useEffect
         }
       } else {
         // Handle signup
@@ -135,28 +130,12 @@ const AuthFormContent = () => {
         const { error } = await signUp(email, password, fullName, businessName);
         if (error) throw error;
         
-        // Show success message
+        // Show success message - the verification UI will be shown automatically
         setSuccess('Account created successfully! Please check your email to verify your account.');
-        toast({
-          title: "Account created",
-          description: "Please check your email to verify your account.",
-          variant: "default",
-        });
-        
-        // Switch to login view after successful signup
-        setTimeout(() => {
-          setIsLogin(true);
-          setSuccess(null);
-        }, 2000);
       }
     } catch (err: any) {
       console.error('Authentication error:', err);
       setError(err.message || 'An error occurred during authentication');
-      toast({
-        title: "Authentication error",
-        description: err.message || 'An error occurred during authentication',
-        variant: "destructive",
-      });
     } finally {
       setIsLoading(false);
     }
