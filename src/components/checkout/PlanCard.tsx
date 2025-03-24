@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { formatCurrency } from '../../utils/stripe';
+import { formatCurrency } from '../../utils/stripe/formatting';
 import { CheckCircle } from 'lucide-react';
 
 interface PlanCardProps {
