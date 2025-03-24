@@ -33,13 +33,19 @@ export const getCurrentSubscription = async (userId: string): Promise<Subscripti
       if (daysUntilExpiry < 0) daysUntilExpiry = 0;
     }
 
+    // Use account_type field to determine status if available
+    const accountType = profile?.account_type || 'demo';
+    const isTrialing = accountType === 'trial' && 
+                      profile?.trial_ends_at && 
+                      new Date(profile.trial_ends_at) > new Date();
+
     return {
       status: profile?.subscription_status || (profile?.subscription_plan ? 'active' : 'inactive'),
       plan: profile?.subscription_plan || null, // Default to null if none is set
-      currentPeriodEnd: profile?.trial_ends_at || new Date().toISOString(),
+      currentPeriodEnd: profile?.subscription_current_period_end || profile?.trial_ends_at || new Date().toISOString(),
       isCanceled: profile?.subscription_status === 'canceled',
-      isTrialing: profile?.trial_ends_at && new Date(profile.trial_ends_at) > new Date(),
-      accountType: profile?.account_type || 'demo',
+      isTrialing: isTrialing,
+      accountType: accountType,
       daysUntilExpiry
     };
   } catch (error) {

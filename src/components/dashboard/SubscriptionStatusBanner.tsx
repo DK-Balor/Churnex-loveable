@@ -42,9 +42,19 @@ export default function SubscriptionStatusBanner({ profile }: SubscriptionStatus
 
   const timeRemaining = getTimeRemaining();
   const demoExpiryDays = getDemoExpiryDays();
-  const isTrialing = profile?.trial_ends_at && new Date(profile.trial_ends_at) > new Date();
-  const isActive = profile?.subscription_status === 'active';
-  const isDemo = profile.account_type === 'demo' || (!isActive && !isTrialing);
+  
+  // Check account status with strict conditions
+  // Only consider it a trial if trial_ends_at exists, is in the future, AND account_type is 'trial'
+  const isTrialing = profile.account_type === 'trial' && 
+                    profile.trial_ends_at && 
+                    new Date(profile.trial_ends_at) > new Date();
+                    
+  // Only consider active if subscription_status is 'active' AND account_type is 'paid'
+  const isActive = profile.subscription_status === 'active' && 
+                  profile.account_type === 'paid';
+                  
+  // Everything else is considered a demo account
+  const isDemo = !isActive && !isTrialing;
   
   // If user has an active paid subscription
   if (isActive && profile.subscription_plan) {

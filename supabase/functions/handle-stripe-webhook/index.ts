@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.4";
 import Stripe from "https://esm.sh/stripe@12.5.0";
@@ -78,19 +77,21 @@ const handleCheckoutCompleted = async (session: any) => {
     const isTrialing = subscription.status === 'trialing';
     const trialEndDate = isTrialing ? new Date(subscription.trial_end * 1000) : null;
     
-    // Update the user's subscription in the database
+    // Update the user's subscription in the database with clear account type
     await updateUserMetadata(userId, {
       subscription_plan: plan,
       subscription_status: subscription.status,
       stripe_customer_id: session.customer,
       stripe_subscription_id: subscriptionId,
       trial_ends_at: isTrialing ? trialEndDate.toISOString() : null,
-      account_type: isTrialing ? 'trial' : 'paid', // Update account type
+      account_type: isTrialing ? 'trial' : 'paid', // Set appropriate account type
       // Clear account expiry for paid accounts
-      account_expires_at: null
+      account_expires_at: null,
+      // Set subscription period end date
+      subscription_current_period_end: new Date(subscription.current_period_end * 1000).toISOString()
     });
     
-    console.log(`Successfully updated subscription for user ${userId} to plan ${plan}`);
+    console.log(`Successfully updated subscription for user ${userId} to plan ${plan}, account type: ${isTrialing ? 'trial' : 'paid'}`);
   }
 };
 
@@ -172,13 +173,18 @@ const handleSubscriptionUpdated = async (subscription: any) => {
   // If account is reverting to demo, set expiry date to 30 days from now
   const accountExpiresAt = accountType === 'demo' ? 
     new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() : null;
+    
+  // Set current period end date for active subscriptions
+  const subscriptionCurrentPeriodEnd = (isActive || isTrialing) ? 
+    new Date(subscription.current_period_end * 1000).toISOString() : null;
   
-  // Update subscription status
+  // Update subscription status with all relevant fields
   await updateUserMetadata(userId, {
     subscription_status: subscription.status,
     trial_ends_at: isTrialing ? trialEndDate.toISOString() : null,
     account_type: accountType,
-    account_expires_at: accountExpiresAt
+    account_expires_at: accountExpiresAt,
+    subscription_current_period_end: subscriptionCurrentPeriodEnd
   });
   
   console.log(`Updated subscription status to ${subscription.status} and account type to ${accountType} for user ${userId}`);
