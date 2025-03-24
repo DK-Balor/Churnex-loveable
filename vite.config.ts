@@ -28,5 +28,9 @@ export default defineConfig(({ mode }) => ({
   },
   optimizeDeps: {
     exclude: [],
+  },
+  // Explicit TypeScript configuration to avoid reference issues
+  esbuild: {
+    logOverride: { 'this-is-undefined-in-esm': 'silent' }
   }
 }));
