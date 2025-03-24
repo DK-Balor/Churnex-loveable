@@ -172,6 +172,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const verifyEmail = async (email: string, token: string) => {
     try {
+      console.log('Verifying email with token:', token);
       const { error } = await supabase.auth.verifyOtp({
         email,
         token,
@@ -208,6 +209,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const resendVerificationEmail = async (email: string) => {
     try {
+      console.log('Resending verification email to:', email);
       const { error } = await supabase.auth.resend({
         type: 'signup',
         email,
@@ -225,7 +227,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       toast({
         title: "Verification email sent",
-        description: "Please check your inbox for the verification link.",
+        description: "Please check your inbox for the verification code.",
       });
       
       return { error: null };
@@ -278,7 +280,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           login_count: 1
         }]);
         
-        // No toast here as we'll show the verification UI directly
+        console.log('Automatically sending verification code after signup');
+        // Automatically trigger a verification email to be sent
+        await resendVerificationEmail(email);
       }
 
       return { error: response.error, data: response.data };
@@ -318,7 +322,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     signOut,
     resendVerificationEmail,
     verifyEmail,
-    updateProfile
+    updateProfile,
+    setEmailConfirmed
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

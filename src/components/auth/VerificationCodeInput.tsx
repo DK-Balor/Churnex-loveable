@@ -6,11 +6,13 @@ import { supabase } from '../../integrations/supabase/client';
 interface VerificationCodeInputProps {
   email: string;
   onVerificationSuccess: () => void;
+  onResendCode: () => Promise<void>;
 }
 
 const VerificationCodeInput: React.FC<VerificationCodeInputProps> = ({ 
   email, 
-  onVerificationSuccess 
+  onVerificationSuccess,
+  onResendCode
 }) => {
   const [verificationCode, setVerificationCode] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -36,6 +38,7 @@ const VerificationCodeInput: React.FC<VerificationCodeInputProps> = ({
       });
 
       if (error) {
+        console.error('Verification error:', error);
         toast({
           title: "Verification failed",
           description: error.message,
@@ -49,6 +52,7 @@ const VerificationCodeInput: React.FC<VerificationCodeInputProps> = ({
         onVerificationSuccess();
       }
     } catch (error: any) {
+      console.error('Verification exception:', error);
       toast({
         title: "Verification error",
         description: error.message || "An error occurred during verification",
@@ -96,6 +100,16 @@ const VerificationCodeInput: React.FC<VerificationCodeInputProps> = ({
           {isSubmitting ? 'Verifying...' : 'Verify Email'}
         </button>
       </form>
+
+      <div className="mt-3 text-center">
+        <button 
+          onClick={onResendCode}
+          type="button"
+          className="text-sm text-brand-green hover:text-brand-green-600"
+        >
+          Didn't receive a code? Resend
+        </button>
+      </div>
     </div>
   );
 };

@@ -24,7 +24,8 @@ const AuthFormContent = () => {
     passwordTouched,
     confirmPasswordTouched,
     fullNameTouched,
-    businessNameTouched
+    businessNameTouched,
+    isLoading
   } = state;
   
   const { 
@@ -45,6 +46,7 @@ const AuthFormContent = () => {
   const { toast } = useToast();
   const [searchParams] = useSearchParams();
   const [showVerificationCodeInput, setShowVerificationCodeInput] = useState(false);
+  const [resendingCode, setResendingCode] = useState(false);
 
   // Check if the user was redirected after clicking the verification link
   useEffect(() => {
@@ -84,15 +86,28 @@ const AuthFormContent = () => {
     }
   }, [user, emailConfirmed, navigate]);
 
-  const handleResendVerification = async () => {
+  const handleResendCode = async () => {
     if (!email) {
-      setError('Please enter your email address to resend verification');
+      setError('Please enter your email address to resend verification code');
       return;
     }
     
-    setIsLoading(true);
-    await resendVerificationEmail(email);
-    setIsLoading(false);
+    setResendingCode(true);
+    try {
+      const { error } = await resendVerificationEmail(email);
+      if (error) {
+        setError(`Failed to resend code: ${error.message}`);
+      } else {
+        toast({
+          title: "Verification code sent",
+          description: `A new verification code has been sent to ${email}`,
+        });
+      }
+    } catch (err: any) {
+      setError(`An error occurred: ${err.message}`);
+    } finally {
+      setResendingCode(false);
+    }
   };
 
   const handleVerificationSuccess = () => {
@@ -130,8 +145,12 @@ const AuthFormContent = () => {
           throw error;
         }
         
-        // If emailVerificationNeeded, we'll show the verification UI via useEffect
-        if (!error && !emailVerificationNeeded) {
+        // If emailVerificationNeeded, show the verification code input
+        if (emailVerificationNeeded) {
+          console.log("Email verification needed, showing code input");
+          setShowVerificationCodeInput(true);
+          setSuccess('Please verify your email address');
+        } else if (!error) {
           // Only show success message if email is verified
           setSuccess('Login successful! Redirecting to dashboard...');
         }
@@ -151,6 +170,9 @@ const AuthFormContent = () => {
         // Show verification code input after successful signup
         setShowVerificationCodeInput(true);
         setSuccess('Account created successfully! Please enter the verification code sent to your email.');
+        
+        // Automatically send the verification code
+        await handleResendCode();
       }
     } catch (err: any) {
       console.error('Authentication error:', err);
@@ -160,7 +182,7 @@ const AuthFormContent = () => {
     }
   };
 
-  // Show verification code input if the user just signed up
+  // Show verification code input if needed
   if (showVerificationCodeInput) {
     return (
       <div className="min-h-screen bg-gray-50 flex flex-col justify-center">
@@ -187,16 +209,11 @@ const AuthFormContent = () => {
             
             <VerificationCodeInput 
               email={email} 
-              onVerificationSuccess={handleVerificationSuccess} 
+              onVerificationSuccess={handleVerificationSuccess}
+              onResendCode={handleResendCode}
             />
             
             <div className="mt-4 text-center">
-              <button 
-                onClick={handleResendVerification} 
-                className="text-sm text-brand-green hover:text-brand-green-600 mr-4"
-              >
-                Resend code
-              </button>
               <button 
                 onClick={() => {
                   signOut();
@@ -236,23 +253,18 @@ const AuthFormContent = () => {
               </div>
               <h2 className="text-2xl font-bold text-brand-dark-900">Verify your email</h2>
               <p className="mt-2 text-sm text-brand-dark-500">
-                We've sent a verification email to <span className="font-medium">{user.email}</span>.
-                Please check your inbox and click the verification link.
+                We've sent a verification code to <span className="font-medium">{user.email}</span>.
+                Please check your inbox and enter the verification code below.
               </p>
             </div>
             
             <AuthStatusMessage />
             
-            <div className="mt-4">
-              <button
-                onClick={handleResendVerification}
-                disabled={state.isLoading}
-                className={`w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white transition-colors duration-300 
-                  ${state.isLoading ? 'bg-brand-green-300 cursor-not-allowed' : 'bg-brand-green hover:bg-brand-green-600'}`}
-              >
-                {state.isLoading ? 'Sending...' : 'Resend verification email'}
-              </button>
-            </div>
+            <VerificationCodeInput 
+              email={user.email!} 
+              onVerificationSuccess={handleVerificationSuccess}
+              onResendCode={handleResendCode}
+            />
             
             <div className="mt-4 text-center">
               <button 
@@ -303,14 +315,14 @@ const AuthFormContent = () => {
             <div>
               <button
                 type="submit"
-                disabled={state.isLoading || !validation.formIsValid}
+                disabled={isLoading || !validation.formIsValid}
                 className={`w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white transition-colors duration-300 ${
-                  state.isLoading || !validation.formIsValid
+                  isLoading || !validation.formIsValid
                     ? 'bg-brand-green-300 cursor-not-allowed'
                     : 'bg-brand-green hover:bg-brand-green-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-green'
                 }`}
               >
-                {state.isLoading
+                {isLoading
                   ? 'Processing...'
                   : isLogin
                   ? 'Sign in'

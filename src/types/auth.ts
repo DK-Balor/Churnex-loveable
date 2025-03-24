@@ -19,6 +19,7 @@ export type AuthContextType = {
   isLoading: boolean;
   isProfileLoading: boolean;
   emailConfirmed: boolean;
+  setEmailConfirmed: (confirmed: boolean) => void;
   signIn: (email: string, password: string) => Promise<{
     error: Error | null;
     emailVerificationNeeded?: boolean;

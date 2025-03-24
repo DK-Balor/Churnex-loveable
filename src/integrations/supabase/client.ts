@@ -13,5 +13,7 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseKey, {
     persistSession: true,
     autoRefreshToken: true,
     storage: localStorage,
+    flowType: 'pkce',
+    debug: true // Enable this to see detailed auth logs
   }
 });
