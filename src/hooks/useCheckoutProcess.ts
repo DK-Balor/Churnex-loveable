@@ -26,7 +26,7 @@ export const useCheckoutProcess = () => {
 
   // Check if this is a return from a checkout session or if there was a cancellation
   const sessionId = searchParams.get('session_id');
-  const canceled = searchParams.get('canceled');
+  const canceled = searchParams.get('cancelled');
 
   useEffect(() => {
     const fetchPlans = async () => {
@@ -70,12 +70,12 @@ export const useCheckoutProcess = () => {
           if (result.success) {
             setMessage({
               type: 'success',
-              text: `Successfully subscribed to the ${result.plan.charAt(0).toUpperCase() + result.plan.slice(1)} plan! Redirecting to dashboard...`
+              text: `Successfully subscribed to the ${result.plan ? result.plan.charAt(0).toUpperCase() + result.plan.slice(1) : ''} plan! Redirecting to dashboard...`
             });
             
             toast({
               title: "Subscription activated",
-              description: `You have successfully subscribed to the ${result.plan.charAt(0).toUpperCase() + result.plan.slice(1)} plan.`,
+              description: `You have successfully subscribed to the ${result.plan ? result.plan.charAt(0).toUpperCase() + result.plan.slice(1) : ''} plan.`,
               variant: "success",
             });
             
@@ -89,11 +89,11 @@ export const useCheckoutProcess = () => {
               text: 'Subscription was not found. Please contact support if you believe this is an error.'
             });
           }
-        } catch (error) {
+        } catch (error: any) {
           console.error('Error processing checkout:', error);
           setMessage({
             type: 'error',
-            text: 'There was an error processing your subscription. Please try again or contact support.'
+            text: error.message || 'There was an error processing your subscription. Please try again or contact support.'
           });
           
           toast({
@@ -125,6 +125,8 @@ export const useCheckoutProcess = () => {
     }
     
     setIsLoading(true);
+    setMessage(null); // Clear any previous messages
+    
     try {
       console.log('Creating checkout session for plan:', selectedPlan);
       const { url } = await createCheckoutSession(selectedPlan);

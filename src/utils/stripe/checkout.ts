@@ -25,7 +25,7 @@ export const createCheckoutSession = async (priceId: string) => {
     
     if (!data || !data.url) {
       console.error('No checkout URL returned:', data);
-      throw new Error('No checkout URL returned from server');
+      throw new Error(data?.error || 'No checkout URL returned from server');
     }
     
     console.log('Checkout session created successfully:', data);

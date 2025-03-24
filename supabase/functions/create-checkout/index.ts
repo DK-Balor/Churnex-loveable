@@ -43,17 +43,18 @@ async function ensureProductsAndPrices() {
     // For each product config
     for (const [planId, config] of Object.entries(productConfig)) {
       // Define the lookup key for the price
-      const priceId = `price_${planId}`;
+      const lookupKey = `price_${planId}`;
       
       // Check if price already exists
-      console.log(`Checking if price ${priceId} exists...`);
+      console.log(`Checking if price with lookup key ${lookupKey} exists...`);
       const existingPrices = await stripe.prices.list({
-        lookup_keys: [priceId],
+        lookup_keys: [lookupKey],
         limit: 1,
+        active: true,
       });
       
       if (existingPrices.data.length > 0) {
-        console.log(`Price ${priceId} already exists, skipping creation`);
+        console.log(`Price with lookup key ${lookupKey} already exists, skipping creation`);
         continue;
       }
       
@@ -64,11 +65,12 @@ async function ensureProductsAndPrices() {
         description: config.description,
         metadata: {
           features: JSON.stringify(config.features),
+          plan_id: planId,
         },
       });
       
       // Create price
-      console.log(`Creating price for ${planId} plan...`);
+      console.log(`Creating price for ${planId} plan with lookup key ${lookupKey}...`);
       await stripe.prices.create({
         product: product.id,
         unit_amount: config.price,
@@ -76,7 +78,7 @@ async function ensureProductsAndPrices() {
         recurring: {
           interval: 'month',
         },
-        lookup_key: priceId,
+        lookup_key: lookupKey,
         metadata: {
           plan_id: planId,
         },
@@ -99,6 +101,8 @@ serve(async (req) => {
   }
 
   try {
+    console.log("Starting checkout session creation process");
+    
     // Create a Supabase client with the Auth context of the logged in user
     const supabaseClient = createClient(supabaseUrl, supabaseKey);
 
@@ -113,11 +117,22 @@ serve(async (req) => {
     const { data: { user }, error: userError } = await supabaseClient.auth.getUser(token);
 
     if (userError || !user) {
+      console.error("User auth error:", userError);
       throw new Error("Invalid user token");
     }
 
+    console.log("User authenticated:", user.id);
+
     // Get the request body
-    const { priceId, successUrl, cancelUrl } = await req.json();
+    let requestBody;
+    try {
+      requestBody = await req.json();
+    } catch (error) {
+      console.error("Error parsing request body:", error);
+      throw new Error("Invalid request body");
+    }
+
+    const { priceId, successUrl, cancelUrl } = requestBody;
     
     console.log(`Received checkout request for priceId: ${priceId}`);
 
@@ -129,6 +144,7 @@ serve(async (req) => {
     // Ensure all products and prices exist in Stripe
     try {
       await ensureProductsAndPrices();
+      console.log("Products and prices verified/created successfully");
     } catch (error) {
       console.error("Failed to ensure products and prices:", error);
       throw new Error(`Failed to create required products and prices: ${error.message}`);
@@ -208,7 +224,7 @@ serve(async (req) => {
         trial_period_days: 7, // Add a 7-day free trial
       },
       success_url: successUrl || `${req.headers.get("origin")}/checkout-success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: cancelUrl || `${req.headers.get("origin")}/checkout?cancelled=true`, // UK spelling
+      cancel_url: cancelUrl || `${req.headers.get("origin")}/checkout?cancelled=true`,
       customer: customerId,
       client_reference_id: user.id,
       currency: 'gbp', // Set currency to GBP
@@ -233,7 +249,10 @@ serve(async (req) => {
     console.error("Error in create-checkout function:", error);
     
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ 
+        error: error.message || "Unknown error occurred",
+        statusCode: 500
+      }),
       {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },

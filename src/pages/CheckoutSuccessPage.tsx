@@ -35,7 +35,7 @@ export default function CheckoutSuccessPage() {
           
           toast({
             title: "Subscription activated",
-            description: `You have successfully subscribed to the ${result.plan.charAt(0).toUpperCase() + result.plan.slice(1)} plan.`,
+            description: `You have successfully subscribed to the ${result.plan ? result.plan.charAt(0).toUpperCase() + result.plan.slice(1) : ''} plan.`,
             variant: "success"
           });
           
@@ -46,9 +46,9 @@ export default function CheckoutSuccessPage() {
         } else {
           setError('Your subscription could not be verified. Please contact support if you believe this is an error.');
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error('Error processing checkout:', error);
-        setError('There was an error processing your subscription. Please try again or contact support.');
+        setError(error.message || 'There was an error processing your subscription. Please try again or contact support.');
         
         toast({
           title: "Checkout error",
