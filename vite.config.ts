@@ -11,15 +11,12 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
-  // Add the following to ensure TypeScript errors don't block the build
-  // This works around the project reference issue
-  optimizeDeps: {
-    exclude: [],
-  },
+  // Modified to fix build errors
   build: {
     commonjsOptions: {
       transformMixedEsModules: true,
     },
+    target: 'es2015',
   },
   server: {
     host: true,
