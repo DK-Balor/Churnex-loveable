@@ -61,18 +61,18 @@ export default function LandingPage() {
               </li>
               <li>
                 <button 
-                  onClick={() => scrollToSection('pricing')} 
-                  className="text-brand-dark-600 hover:text-brand-dark-800"
-                >
-                  Pricing
-                </button>
-              </li>
-              <li>
-                <button 
                   onClick={() => scrollToSection('stats')} 
                   className="text-brand-dark-600 hover:text-brand-dark-800"
                 >
                   Stats
+                </button>
+              </li>
+              <li>
+                <button 
+                  onClick={() => scrollToSection('pricing')} 
+                  className="text-brand-dark-600 hover:text-brand-dark-800"
+                >
+                  Pricing
                 </button>
               </li>
               <li>
@@ -122,18 +122,18 @@ export default function LandingPage() {
               </li>
               <li>
                 <button 
-                  onClick={() => scrollToSection('pricing')} 
-                  className="text-brand-dark-600 hover:text-brand-dark-800 block w-full text-left py-2"
-                >
-                  Pricing
-                </button>
-              </li>
-              <li>
-                <button 
                   onClick={() => scrollToSection('stats')} 
                   className="text-brand-dark-600 hover:text-brand-dark-800 block w-full text-left py-2"
                 >
                   Stats
+                </button>
+              </li>
+              <li>
+                <button 
+                  onClick={() => scrollToSection('pricing')} 
+                  className="text-brand-dark-600 hover:text-brand-dark-800 block w-full text-left py-2"
+                >
+                  Pricing
                 </button>
               </li>
               <li>
