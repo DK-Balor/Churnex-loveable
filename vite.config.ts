@@ -7,7 +7,12 @@ import { componentTagger } from "lovable-tagger";
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
   plugins: [
-    react(),
+    react({
+      // Add TypeScript specific options
+      babel: {
+        plugins: []
+      }
+    }),
     mode === 'development' && componentTagger(),
   ].filter(Boolean),
   resolve: {
@@ -22,5 +27,20 @@ export default defineConfig(({ mode }) => ({
   build: {
     sourcemap: mode === 'development',
     outDir: 'dist',
+    // Ensure TS references are handled properly
+    rollupOptions: {
+      external: []
+    },
+    commonjsOptions: {
+      transformMixedEsModules: true,
+    }
   },
+  optimizeDeps: {
+    esbuildOptions: {
+      target: 'es2020'
+    }
+  },
+  esbuild: {
+    target: 'es2020'
+  }
 }));
