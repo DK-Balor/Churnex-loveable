@@ -1,27 +1,64 @@
 
-import React from 'react'
+import React from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
+import LandingPage from './pages/LandingPage';
+import AuthPage from './pages/AuthPage';
+import DashboardLayout from './components/layout/DashboardLayout';
+import DashboardPage from './pages/DashboardPage';
+import CustomersPage from './pages/CustomersPage';
+import SubscriptionsPage from './pages/SubscriptionsPage';
+import RecoveryPage from './pages/RecoveryPage';
+import ChurnPredictionPage from './pages/ChurnPredictionPage';
+import SettingsPage from './pages/SettingsPage';
+
+// Protected route component
+const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
+  const { user, isLoading } = useAuth();
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <p className="text-gray-600">Loading...</p>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <Navigate to="/auth" replace />;
+  }
+
+  return <>{children}</>;
+};
 
 function App() {
   return (
-    <div className="min-h-screen bg-slate-50">
-      <header className="bg-gradient-to-r from-blue-600 to-blue-800 p-6 shadow-md">
-        <div className="container mx-auto">
-          <h1 className="text-3xl font-bold text-white">Churnex</h1>
-          <p className="text-blue-100">Intelligent Customer Retention Platform</p>
-        </div>
-      </header>
-      
-      <main className="container mx-auto p-6">
-        <div className="bg-white rounded-lg shadow-md p-8 mt-8">
-          <h2 className="text-2xl font-semibold text-gray-800 mb-4">Welcome to Churnex</h2>
-          <p className="text-gray-600">
-            Predict customer churn and enhance retention strategies with advanced machine learning models.
-            Leverage actionable insights to reduce churn, improve customer lifetime value, and drive sustainable growth.
-          </p>
-        </div>
-      </main>
-    </div>
-  )
+    <AuthProvider>
+      <Router>
+        <Routes>
+          <Route path="/" element={<LandingPage />} />
+          <Route path="/auth" element={<AuthPage />} />
+          
+          {/* Protected dashboard routes */}
+          <Route
+            path="/dashboard"
+            element={
+              <ProtectedRoute>
+                <DashboardLayout />
+              </ProtectedRoute>
+            }
+          >
+            <Route index element={<DashboardPage />} />
+            <Route path="customers" element={<CustomersPage />} />
+            <Route path="subscriptions" element={<SubscriptionsPage />} />
+            <Route path="recovery" element={<RecoveryPage />} />
+            <Route path="churn-prediction" element={<ChurnPredictionPage />} />
+            <Route path="settings" element={<SettingsPage />} />
+          </Route>
+        </Routes>
+      </Router>
+    </AuthProvider>
+  );
 }
 
-export default App
+export default App;
