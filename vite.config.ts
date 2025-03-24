@@ -37,9 +37,7 @@ export default defineConfig(({ mode }) => ({
           target: 'es2020',
           skipLibCheck: true,
           isolatedModules: true
-        },
-        // Remove references that might cause emit issues
-        references: []
+        }
       }
     }
   }
