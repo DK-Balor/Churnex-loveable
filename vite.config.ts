@@ -34,14 +34,6 @@ export default defineConfig(({ mode }) => ({
     logOverride: { 
       'this-is-undefined-in-esm': 'silent',
       'commonjs-variable-in-esm': 'silent'
-    },
-    // Using a stringified JSON for tsconfigRaw to match the expected types
-    tsconfigRaw: JSON.stringify({
-      compilerOptions: {
-        composite: false,
-        incremental: true,
-        isolatedModules: true
-      }
-    })
+    }
   }
 }));
