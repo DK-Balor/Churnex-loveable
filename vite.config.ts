@@ -22,7 +22,8 @@ export default defineConfig(({ mode }) => ({
   },
   server: {
     host: "::",
-    port: 8080
+    port: 8080,
+    allowedHosts: ["de1a2121-ac1b-48af-b6bd-f70fda5830a0.lovableproject.com"]
   },
   build: {
     sourcemap: mode === 'development',
