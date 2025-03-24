@@ -10,6 +10,12 @@ interface SubscriptionStatusBannerProps {
 export default function SubscriptionStatusBanner({ profile }: SubscriptionStatusBannerProps) {
   if (!profile) return null;
   
+  // For debugging purposes
+  console.log('Profile in SubscriptionStatusBanner:', profile);
+  console.log('Account type:', profile.account_type);
+  console.log('Subscription status:', profile.subscription_status);
+  console.log('Trial ends at:', profile.trial_ends_at);
+  
   // Calculate time left in trial or subscription
   const getTimeRemaining = () => {
     if (!profile) return null;
@@ -55,6 +61,10 @@ export default function SubscriptionStatusBanner({ profile }: SubscriptionStatus
                   
   // Everything else is considered a demo account
   const isDemo = !isActive && !isTrialing;
+  
+  console.log('Is trialing:', isTrialing);
+  console.log('Is active:', isActive);
+  console.log('Is demo:', isDemo);
   
   // If user has an active paid subscription
   if (isActive && profile.subscription_plan) {

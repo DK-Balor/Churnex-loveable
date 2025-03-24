@@ -126,30 +126,29 @@ export const useCheckoutProcess = () => {
     
     setIsLoading(true);
     try {
-      // For paid plans, proceed with Stripe checkout
-      try {
-        const { url } = await createCheckoutSession(selectedPlan);
-        
-        if (url) {
-          // Redirect to Stripe Checkout
-          window.location.href = url;
-        } else {
-          throw new Error('No checkout URL returned');
-        }
-      } catch (error: any) {
-        console.error('Error creating checkout session:', error);
-        
-        toast({
-          title: "Checkout Error",
-          description: error.message || "Failed to create checkout session. Please try again.",
-          variant: "destructive",
-        });
-        
-        setMessage({
-          type: 'error',
-          text: error.message || 'There was an error creating your checkout session. Please try again.'
-        });
+      console.log('Creating checkout session for plan:', selectedPlan);
+      const { url } = await createCheckoutSession(selectedPlan);
+      
+      if (url) {
+        console.log('Redirecting to Stripe checkout URL:', url);
+        // Redirect to Stripe Checkout
+        window.location.href = url;
+      } else {
+        throw new Error('No checkout URL returned');
       }
+    } catch (error: any) {
+      console.error('Error creating checkout session:', error);
+      
+      toast({
+        title: "Checkout Error",
+        description: error.message || "Failed to create checkout session. Please try again.",
+        variant: "destructive",
+      });
+      
+      setMessage({
+        type: 'error',
+        text: error.message || 'There was an error creating your checkout session. Please try again.'
+      });
     } finally {
       setIsLoading(false);
     }

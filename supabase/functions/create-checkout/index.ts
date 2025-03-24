@@ -46,6 +46,7 @@ async function ensureProductsAndPrices() {
       const priceId = `price_${planId}`;
       
       // Check if price already exists
+      console.log(`Checking if price ${priceId} exists...`);
       const existingPrices = await stripe.prices.list({
         lookup_keys: [priceId],
         limit: 1,
@@ -87,7 +88,7 @@ async function ensureProductsAndPrices() {
     return true;
   } catch (error) {
     console.error("Error ensuring products and prices:", error);
-    return false;
+    throw error; // Re-throw to handle it in the main function
   }
 }
 
@@ -126,7 +127,12 @@ serve(async (req) => {
     }
 
     // Ensure all products and prices exist in Stripe
-    await ensureProductsAndPrices();
+    try {
+      await ensureProductsAndPrices();
+    } catch (error) {
+      console.error("Failed to ensure products and prices:", error);
+      throw new Error(`Failed to create required products and prices: ${error.message}`);
+    }
     
     // Extract the plan name from the priceId (e.g., "price_growth" -> "growth")
     const planName = priceId.replace('price_', '');
@@ -137,6 +143,7 @@ serve(async (req) => {
     }
 
     // Look up the price in Stripe using the lookup_key
+    console.log(`Looking up price with lookup key: ${priceId}`);
     const prices = await stripe.prices.list({
       lookup_keys: [priceId],
       active: true,
@@ -144,7 +151,7 @@ serve(async (req) => {
     });
 
     if (prices.data.length === 0) {
-      throw new Error(`Price not found for lookup key: ${priceId}`);
+      throw new Error(`Price not found for lookup key: ${priceId} even after creation attempt`);
     }
 
     const price = prices.data[0];
@@ -187,6 +194,7 @@ serve(async (req) => {
     }
 
     // Create a Stripe checkout session with a trial period
+    console.log("Creating checkout session...");
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ["card"],
       line_items: [
@@ -210,6 +218,7 @@ serve(async (req) => {
       },
     });
 
+    console.log(`Checkout session created successfully: ${session.id}`);
     return new Response(
       JSON.stringify({
         sessionId: session.id,

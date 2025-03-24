@@ -14,6 +14,8 @@ interface Subscription {
 // Function to get the current user's subscription
 export const getCurrentSubscription = async (userId: string): Promise<Subscription> => {
   try {
+    console.log('Fetching subscription for user:', userId);
+    
     // Fetch user's subscription data from Supabase
     const { data: profile, error } = await supabase
       .from('user_metadata')
@@ -21,8 +23,13 @@ export const getCurrentSubscription = async (userId: string): Promise<Subscripti
       .eq('id', userId)
       .single();
 
-    if (error) throw error;
+    if (error) {
+      console.error('Error fetching user metadata:', error);
+      throw error;
+    }
 
+    console.log('User metadata retrieved:', profile);
+    
     // Calculate days until expiry for demo accounts
     let daysUntilExpiry = null;
     if (profile?.account_expires_at) {
@@ -35,9 +42,16 @@ export const getCurrentSubscription = async (userId: string): Promise<Subscripti
 
     // Use account_type field to determine status if available
     const accountType = profile?.account_type || 'demo';
+    
+    // Only consider it a trial if account_type is 'trial' AND trial_ends_at exists and is in the future
     const isTrialing = accountType === 'trial' && 
                       profile?.trial_ends_at && 
                       new Date(profile.trial_ends_at) > new Date();
+    
+    console.log('Account type:', accountType);
+    console.log('Is trialing:', isTrialing);
+    console.log('Trial ends at:', profile?.trial_ends_at);
+    console.log('Subscription status:', profile?.subscription_status);
 
     return {
       status: profile?.subscription_status || (profile?.subscription_plan ? 'active' : 'inactive'),
