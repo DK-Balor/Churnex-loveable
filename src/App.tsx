@@ -11,6 +11,7 @@ import SubscriptionsPage from './pages/SubscriptionsPage';
 import RecoveryPage from './pages/RecoveryPage';
 import ChurnPredictionPage from './pages/ChurnPredictionPage';
 import SettingsPage from './pages/SettingsPage';
+import CheckoutPage from './pages/CheckoutPage';
 
 // Protected route component
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -38,6 +39,14 @@ function App() {
         <Routes>
           <Route path="/" element={<LandingPage />} />
           <Route path="/auth" element={<AuthPage />} />
+          <Route 
+            path="/checkout" 
+            element={
+              <ProtectedRoute>
+                <CheckoutPage />
+              </ProtectedRoute>
+            } 
+          />
           
           {/* Protected dashboard routes */}
           <Route
@@ -55,6 +64,9 @@ function App() {
             <Route path="churn-prediction" element={<ChurnPredictionPage />} />
             <Route path="settings" element={<SettingsPage />} />
           </Route>
+          
+          {/* Catch-all route */}
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Router>
     </AuthProvider>

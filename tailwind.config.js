@@ -52,9 +52,33 @@ module.exports = {
           foreground: "hsl(var(--card-foreground))",
         },
         brand: {
-          purple: "#9b87f5",
-          darkPurple: "#7E69AB",
-          lightPurple: "#D6BCFA"
+          // New color palette based on reference image
+          green: {
+            DEFAULT: "#00B37A",
+            50: "#E6F9F1",
+            100: "#CCF3E4",
+            200: "#99E7C9",
+            300: "#66DBAE",
+            400: "#33CF93",
+            500: "#00B37A",
+            600: "#009966",
+            700: "#007F53",
+            800: "#00664D",
+            900: "#004C3D"
+          },
+          dark: {
+            DEFAULT: "#1F2937",
+            50: "#F9FAFB",
+            100: "#F3F4F6",
+            200: "#E5E7EB",
+            300: "#D1D5DB",
+            400: "#9CA3AF",
+            500: "#6B7280",
+            600: "#4B5563",
+            700: "#374151",
+            800: "#1F2937",
+            900: "#111827"
+          }
         }
       },
       borderRadius: {
