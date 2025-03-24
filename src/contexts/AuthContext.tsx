@@ -1,7 +1,7 @@
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
-import { supabase, sendVerificationCode } from '../integrations/supabase/client';
+import { supabase, sendVerificationEmail } from '../integrations/supabase/client';
 import { useToast } from '../components/ui/use-toast';
 import { AuthContextType } from '../types/auth';
 import { checkSessionExpiry, updateUserActivity, trackUserLogin } from '../utils/authUtils';
@@ -211,7 +211,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       console.log('Resending verification email to:', email);
       // Use the helper function we created with emailRedirectTo
-      const { error } = await sendVerificationCode(email);
+      const { error } = await sendVerificationEmail(email);
       
       if (error) {
         console.error('Error resending verification email:', error);

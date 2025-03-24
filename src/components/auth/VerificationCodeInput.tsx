@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useToast } from '../../components/ui/use-toast';
-import { supabase, sendVerificationCode } from '../../integrations/supabase/client';
+import { supabase, sendVerificationEmail } from '../../integrations/supabase/client';
 
 interface VerificationCodeInputProps {
   email: string;
@@ -14,7 +14,6 @@ const VerificationCodeInput: React.FC<VerificationCodeInputProps> = ({
   onVerificationSuccess,
   onResendCode
 }) => {
-  const [verificationCode, setVerificationCode] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [resendDisabled, setResendDisabled] = useState(false);
   const [countdown, setCountdown] = useState(0);
@@ -30,79 +29,32 @@ const VerificationCodeInput: React.FC<VerificationCodeInputProps> = ({
     }
   }, [countdown, resendDisabled]);
 
-  const handleVerifyCode = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!verificationCode.trim()) {
-      toast({
-        title: "Verification code required",
-        description: "Please enter the code sent to your email.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setIsSubmitting(true);
-    try {
-      console.log('Verifying code:', verificationCode, 'for email:', email);
-      const { error } = await supabase.auth.verifyOtp({
-        email,
-        token: verificationCode,
-        type: 'signup'
-      });
-
-      if (error) {
-        console.error('Verification error:', error);
-        toast({
-          title: "Verification failed",
-          description: error.message,
-          variant: "destructive",
-        });
-      } else {
-        console.log('Verification successful');
-        toast({
-          title: "Email verified",
-          description: "Your email has been successfully verified.",
-        });
-        onVerificationSuccess();
-      }
-    } catch (error: any) {
-      console.error('Verification exception:', error);
-      toast({
-        title: "Verification error",
-        description: error.message || "An error occurred during verification",
-        variant: "destructive",
-      });
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
   const handleResendCode = async () => {
     setResendDisabled(true);
     setCountdown(60); // Disable resend for 60 seconds
     
     try {
-      console.log('Resending verification code to:', email);
-      const { error } = await sendVerificationCode(email);
+      console.log('Resending verification email to:', email);
+      const { error } = await sendVerificationEmail(email);
       
       if (error) {
         console.error('Error resending code:', error);
         toast({
-          title: "Failed to resend code",
-          description: error.message || "An error occurred while sending the verification code",
+          title: "Failed to resend verification email",
+          description: error.message || "An error occurred while sending the verification email",
           variant: "destructive",
         });
       } else {
         toast({
-          title: "Verification code sent",
-          description: `A new verification code has been sent to ${email}`,
+          title: "Verification email sent",
+          description: `A verification link has been sent to ${email}. Please check your inbox and click the link to verify your email.`,
         });
       }
     } catch (error: any) {
       console.error('Exception resending code:', error);
       toast({
         title: "Error",
-        description: error.message || "An error occurred while sending the verification code",
+        description: error.message || "An error occurred while sending the verification email",
         variant: "destructive",
       });
     }
@@ -114,54 +66,31 @@ const VerificationCodeInput: React.FC<VerificationCodeInputProps> = ({
     <div className="space-y-4">
       <div className="text-center mb-4">
         <p className="text-sm text-brand-dark-500">
-          We've sent a verification code to <span className="font-medium">{email}</span>.
-          Please enter the code below to verify your account.
+          We've sent a verification link to <span className="font-medium">{email}</span>.
+          Please check your inbox and click the link to verify your account.
         </p>
       </div>
       
-      <form onSubmit={handleVerifyCode} className="space-y-4">
-        <div>
-          <label htmlFor="verificationCode" className="block text-sm font-medium text-brand-dark-700">
-            Verification Code
-          </label>
-          <input
-            id="verificationCode"
-            name="verificationCode"
-            type="text"
-            value={verificationCode}
-            onChange={(e) => setVerificationCode(e.target.value)}
-            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-brand-green focus:border-brand-green"
-            placeholder="Enter your verification code"
-          />
-        </div>
-        
-        <button
-          type="submit"
-          disabled={isSubmitting || !verificationCode}
-          className={`w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white transition-colors duration-300 ${
-            isSubmitting || !verificationCode
-              ? 'bg-brand-green-300 cursor-not-allowed'
-              : 'bg-brand-green hover:bg-brand-green-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-green'
-          }`}
-        >
-          {isSubmitting ? 'Verifying...' : 'Verify Email'}
-        </button>
-      </form>
+      <div className="bg-amber-50 border border-amber-200 rounded-md p-4 mb-4">
+        <p className="text-sm text-amber-800">
+          A verification link has been sent to your email address. Please check your inbox (and spam folder) and click the link to complete the verification process.
+        </p>
+      </div>
 
       <div className="mt-3 text-center">
         <button 
           onClick={handleResendCode}
           type="button"
           disabled={resendDisabled}
-          className={`text-sm ${
+          className={`w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white transition-colors duration-300 ${
             resendDisabled 
-              ? 'text-gray-400 cursor-not-allowed' 
-              : 'text-brand-green hover:text-brand-green-600'
+              ? 'bg-brand-green-300 cursor-not-allowed' 
+              : 'bg-brand-green hover:bg-brand-green-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-green'
           }`}
         >
           {resendDisabled 
-            ? `Resend code in ${countdown}s` 
-            : "Didn't receive a code? Resend"}
+            ? `Resend verification link in ${countdown}s` 
+            : "Didn't receive a link? Resend"}
         </button>
       </div>
     </div>

@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -10,7 +9,7 @@ import { useAuthFormValidation } from '../hooks/useAuthFormValidation';
 import { useToast } from '../components/ui/use-toast';
 import { MailCheck } from 'lucide-react';
 import VerificationCodeInput from '../components/auth/VerificationCodeInput';
-import { sendVerificationCode, verifyEmailWithLink } from '../integrations/supabase/client';
+import { supabase, sendVerificationEmail, verifyEmailWithLink } from '../integrations/supabase/client';
 
 const AuthFormContent = () => {
   const { state, actions } = useAuthForm();
@@ -87,7 +86,7 @@ const AuthFormContent = () => {
       
       processVerificationLink();
     }
-  }, [searchParams]);
+  }, [searchParams, setEmailConfirmed, navigate, setError, setSuccess, setIsLoading]);
 
   // Use our validation hook
   const validation = useAuthFormValidation(
@@ -121,19 +120,19 @@ const AuthFormContent = () => {
 
   const handleResendCode = async () => {
     if (!email) {
-      setError('Please enter your email address to resend verification code');
+      setError('Please enter your email address to resend verification email');
       return;
     }
     
     setResendingCode(true);
     try {
-      console.log('AuthPage: Resending verification code to:', email);
-      // Use our helper function for more reliable code sending
-      const { error } = await sendVerificationCode(email);
+      console.log('AuthPage: Resending verification email to:', email);
+      // Use our helper function for more reliable email sending
+      const { error } = await sendVerificationEmail(email);
       
       if (error) {
-        console.error('AuthPage: Failed to resend code:', error);
-        setError(`Failed to resend code: ${error.message}`);
+        console.error('AuthPage: Failed to resend email:', error);
+        setError(`Failed to resend verification email: ${error.message}`);
       } else {
         console.log('AuthPage: Verification email sent successfully');
         toast({
@@ -142,7 +141,7 @@ const AuthFormContent = () => {
         });
       }
     } catch (err: any) {
-      console.error('AuthPage: Error resending code:', err);
+      console.error('AuthPage: Error resending email:', err);
       setError(`An error occurred: ${err.message}`);
     } finally {
       setResendingCode(false);
