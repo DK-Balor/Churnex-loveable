@@ -148,7 +148,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (error.message.includes('Email not confirmed')) {
           setEmailConfirmed(false);
           // Don't show toast here since we'll show the verification UI instead
-          // Return the user even though there was an error
           return { error, emailVerificationNeeded: true };
         }
         
