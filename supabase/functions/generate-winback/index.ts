@@ -1,15 +1,9 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.4";
-import { OpenAI } from "https://esm.sh/openai@4.0.0";
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
 const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
-const openaiApiKey = Deno.env.get("OPENAI_API_KEY") || "";
-
-const openai = new OpenAI({
-  apiKey: openaiApiKey,
-});
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -24,6 +18,7 @@ serve(async (req) => {
   }
 
   try {
+    // Create a Supabase client with the Auth context of the logged in user
     const supabaseClient = createClient(supabaseUrl, supabaseKey);
 
     // Get the authorization header from the request
@@ -40,42 +35,79 @@ serve(async (req) => {
       throw new Error("Invalid user token");
     }
 
-    // Get the request body
+    // Get the request body (customer data)
     const { customerId, customerData } = await req.json();
-    
-    if (!customerId || !customerData) {
-      throw new Error("Missing required fields");
+
+    if (!customerId) {
+      throw new Error("Customer ID is required");
     }
 
-    // Use OpenAI to generate personalized win-back campaign suggestions
-    const aiResponse = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages: [
-        {
-          role: "system",
-          content: "You are an expert in customer retention and win-back strategies. Generate personalized win-back campaign suggestions for a customer at risk of churning. The output should be a JSON array of 3 campaign ideas, each with keys 'title', 'message', 'incentive' (object with 'type', 'value', and 'unit' keys), and 'predictedSuccessRate' (number between 1-100)."
-        },
-        {
-          role: "user",
-          content: `Customer: ${customerData.name}
-            Plan: ${customerData.plan}
-            Monthly value: $${customerData.monthlyValue}
-            Churn risk: ${customerData.churnRisk}%
-            Risk factors: ${customerData.factors.join(", ")}`
-        }
+    console.log(`Generating win-back suggestions for customer ${customerId}`);
+
+    // In a real implementation, this would use an AI model to generate personalized suggestions
+    // For demo purposes, we'll return predefined suggestions based on risk factors
+    
+    // Get the customer's risk factors
+    const riskFactors = customerData?.riskFactors || [];
+    
+    // Sample suggestion templates
+    const commonSuggestions = [
+      "Offer a one-month billing credit as a gesture of goodwill.",
+      "Schedule a personal account review call to discuss their needs.",
+      "Send an email highlighting new features that address their specific use case.",
+      "Provide a case study showing how similar companies are succeeding with your product."
+    ];
+    
+    const specificSuggestions = {
+      "payment": [
+        "Offer a flexible payment plan to accommodate their budget constraints.",
+        "Temporarily downgrade their plan while maintaining key features they use most.",
+        "Provide a 15% discount for an annual commitment to stabilize their costs."
       ],
-      temperature: 0.7,
-      response_format: { type: "json_object" }
+      "usage": [
+        "Schedule a personalized training session to help them maximize product value.",
+        "Create a custom onboarding flow for their new team members.",
+        "Share relevant templates and automations that can help them achieve their goals faster."
+      ],
+      "competitor": [
+        "Conduct a side-by-side feature comparison emphasizing your unique advantages.",
+        "Offer an exclusive feature or integration that differentiates your product.",
+        "Create a personalized ROI analysis showing the value gained by staying with your solution."
+      ],
+      "support": [
+        "Assign a dedicated customer success manager for the next 90 days.",
+        "Upgrade their support package at no additional cost for 3 months.",
+        "Schedule a technical deep dive to resolve any outstanding issues."
+      ]
+    };
+    
+    // Generate personalized suggestions based on risk factors
+    let generatedSuggestions = [...commonSuggestions];
+    
+    // Add specific suggestions based on identified risk factors
+    riskFactors.forEach(factor => {
+      const factorLower = factor.toLowerCase();
+      
+      if (factorLower.includes("payment") || factorLower.includes("price") || factorLower.includes("cost") || factorLower.includes("budget")) {
+        generatedSuggestions.push(...specificSuggestions.payment);
+      } else if (factorLower.includes("usage") || factorLower.includes("active") || factorLower.includes("feature")) {
+        generatedSuggestions.push(...specificSuggestions.usage);
+      } else if (factorLower.includes("competitor")) {
+        generatedSuggestions.push(...specificSuggestions.competitor);
+      } else if (factorLower.includes("support") || factorLower.includes("ticket")) {
+        generatedSuggestions.push(...specificSuggestions.support);
+      }
     });
     
-    // Parse the AI response
-    const aiSuggestions = JSON.parse(aiResponse.choices[0].message.content);
+    // Remove duplicates and select up to 5 suggestions
+    const uniqueSuggestions = [...new Set(generatedSuggestions)];
+    const finalSuggestions = uniqueSuggestions.slice(0, 5);
 
     return new Response(
       JSON.stringify({
         data: {
-          suggestions: aiSuggestions.campaigns || aiSuggestions
-        }
+          suggestions: finalSuggestions,
+        },
       }),
       {
         status: 200,

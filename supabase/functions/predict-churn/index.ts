@@ -1,15 +1,9 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.4";
-import { OpenAI } from "https://esm.sh/openai@4.0.0";
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
 const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
-const openaiApiKey = Deno.env.get("OPENAI_API_KEY") || "";
-
-const openai = new OpenAI({
-  apiKey: openaiApiKey,
-});
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -24,6 +18,7 @@ serve(async (req) => {
   }
 
   try {
+    // Create a Supabase client with the Auth context of the logged in user
     const supabaseClient = createClient(supabaseUrl, supabaseKey);
 
     // Get the authorization header from the request
@@ -40,113 +35,90 @@ serve(async (req) => {
       throw new Error("Invalid user token");
     }
 
-    // For a real app, we would fetch customer data from the database
-    // and pass it to an ML model or OpenAI for prediction
-    // For now, we'll use mock data and enhance it with AI analysis
-
-    // Get mock customer data
-    const customers = [
+    // In a real implementation, this would query a customer table and run an AI model
+    // For demo purposes, we'll return mock data
+    
+    // Mock data - in production this would be actual customer data with AI-generated risk scores
+    const churnRiskData = [
       {
-        id: '1',
-        name: 'Globex Industries',
-        email: 'accounts@globex.com',
-        plan: 'Scale',
-        activityData: {
-          logins: { last30Days: 12, previous30Days: 25 },
-          featureUsage: { last30Days: 35, previous30Days: 78 },
-          supportRequests: { last30Days: 3, previous30Days: 1 }
-        },
-        monthlyValue: 119,
+        id: "1",
+        customerName: "Acme Corporation",
+        email: "billing@acmecorp.com",
+        riskScore: 82,
+        riskFactors: [
+          "Decreasing usage over last 3 months",
+          "Multiple support tickets about pricing",
+          "Competitor engagement detected"
+        ],
+        monthlyValue: 349,
+        predictedChurnDate: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString(),
+        lastActivity: new Date(Date.now() - 12 * 24 * 60 * 60 * 1000).toISOString()
       },
       {
-        id: '2',
-        name: 'Oscorp',
-        email: 'norman@oscorp.com',
-        plan: 'Scale',
-        activityData: {
-          logins: { last30Days: 8, previous30Days: 15 },
-          featureUsage: { last30Days: 22, previous30Days: 45 },
-          supportRequests: { last30Days: 1, previous30Days: 0 }
-        },
+        id: "2",
+        customerName: "TechStart Inc",
+        email: "finance@techstart.io",
+        riskScore: 65,
+        riskFactors: [
+          "Payment failed twice this month",
+          "Feature usage declined by 40%",
+          "Recently viewed pricing page multiple times"
+        ],
         monthlyValue: 119,
+        predictedChurnDate: new Date(Date.now() + 25 * 24 * 60 * 60 * 1000).toISOString(),
+        lastActivity: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString()
       },
       {
-        id: '3',
-        name: 'Dunder Mifflin',
-        email: 'michael@dundermifflin.com',
-        plan: 'Growth',
-        activityData: {
-          logins: { last30Days: 4, previous30Days: 10 },
-          featureUsage: { last30Days: 12, previous30Days: 30 },
-          supportRequests: { last30Days: 2, previous30Days: 0 }
-        },
-        monthlyValue: 59,
+        id: "3",
+        customerName: "Global Solutions Ltd",
+        email: "accounts@globalsolutions.com",
+        riskScore: 78,
+        riskFactors: [
+          "Downgraded from Pro to Basic plan",
+          "Support chat mentioned budget cuts",
+          "User count decreased by 30%"
+        ],
+        monthlyValue: 249,
+        predictedChurnDate: new Date(Date.now() + 18 * 24 * 60 * 60 * 1000).toISOString(),
+        lastActivity: new Date(Date.now() - 8 * 24 * 60 * 60 * 1000).toISOString()
+      },
+      {
+        id: "4",
+        customerName: "Innovative Designs",
+        email: "billing@innovativedesigns.co",
+        riskScore: 91,
+        riskFactors: [
+          "Admin user requested cancellation info",
+          "No active logins in last 14 days",
+          "Failed payment followed by dispute"
+        ],
+        monthlyValue: 199,
+        predictedChurnDate: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toISOString(),
+        lastActivity: new Date(Date.now() - 18 * 24 * 60 * 60 * 1000).toISOString()
+      },
+      {
+        id: "5",
+        customerName: "Summit Enterprises",
+        email: "finance@summitent.net",
+        riskScore: 52,
+        riskFactors: [
+          "Support complained about missing feature",
+          "Reduced API usage by 25%",
+          "Competitor product trial signup detected"
+        ],
+        monthlyValue: 179,
+        predictedChurnDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+        lastActivity: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString()
       }
     ];
-    
-    // Use OpenAI to analyze and enhance the churn prediction
-    const customersWithAIPredictions = await Promise.all(customers.map(async (customer) => {
-      try {
-        // Create a context with customer activity data for AI analysis
-        const context = `
-          Customer: ${customer.name}
-          Plan: ${customer.plan} ($${customer.monthlyValue}/month)
-          Activity data:
-          - Logins last 30 days: ${customer.activityData.logins.last30Days} (previous 30 days: ${customer.activityData.logins.previous30Days})
-          - Feature usage last 30 days: ${customer.activityData.featureUsage.last30Days} (previous 30 days: ${customer.activityData.featureUsage.previous30Days})
-          - Support requests last 30 days: ${customer.activityData.supportRequests.last30Days} (previous 30 days: ${customer.activityData.supportRequests.previous30Days})
-        `;
-        
-        const aiResponse = await openai.chat.completions.create({
-          model: "gpt-4o-mini",
-          messages: [
-            {
-              role: "system",
-              content: "You are an expert in customer churn analysis. Your task is to analyze customer activity data and provide a churn risk percentage and list the specific risk factors that might lead to churn. Output ONLY a JSON object with keys 'churnRisk' (number between 0-100) and 'factors' (array of strings)."
-            },
-            {
-              role: "user",
-              content: context
-            }
-          ],
-          temperature: 0.2,
-          response_format: { type: "json_object" }
-        });
-        
-        // Parse the AI response
-        const aiOutput = JSON.parse(aiResponse.choices[0].message.content);
-        
-        return {
-          id: customer.id,
-          name: customer.name,
-          email: customer.email,
-          plan: customer.plan,
-          churnRisk: aiOutput.churnRisk,
-          monthlyValue: customer.monthlyValue,
-          factors: aiOutput.factors
-        };
-      } catch (error) {
-        console.error(`Error analyzing customer ${customer.name}:`, error);
-        
-        // Fallback if AI analysis fails
-        return {
-          id: customer.id,
-          name: customer.name,
-          email: customer.email,
-          plan: customer.plan,
-          churnRisk: Math.floor(Math.random() * 40) + 60, // Fallback random risk between 60-99
-          monthlyValue: customer.monthlyValue,
-          factors: ['Decreasing usage trend detected']
-        };
-      }
-    }));
-    
-    // Sort by churn risk (highest first)
-    customersWithAIPredictions.sort((a, b) => b.churnRisk - a.churnRisk);
+
+    // Record analytics for this user
+    // In a production app, this would update actual analytics in the database
+    console.log(`Churn prediction requested by user ${user.id}`);
 
     return new Response(
       JSON.stringify({
-        data: customersWithAIPredictions
+        data: churnRiskData,
       }),
       {
         status: 200,

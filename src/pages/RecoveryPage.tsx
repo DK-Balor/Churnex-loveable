@@ -1,239 +1,170 @@
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import { analyzeRecoveryPerformance } from '../utils/ai';
+import RecoveryCampaignCard from '../components/recovery/RecoveryCampaignCard';
+import { useToast } from '../components/ui/use-toast';
+import { BarChart4, Plus, Sparkles } from 'lucide-react';
 
-type RecoveryAttempt = {
+interface RecoveryCampaign {
   id: string;
-  customerName: string;
-  email: string;
-  failedAmount: number;
-  failureDate: string;
-  status: 'Pending' | 'Recovered' | 'Failed';
-  attempts: number;
-  nextAttempt: string | null;
-};
-
-const mockRecoveryAttempts: RecoveryAttempt[] = [
-  {
-    id: '1',
-    customerName: 'Globex Industries',
-    email: 'accounts@globex.com',
-    failedAmount: 119,
-    failureDate: '2023-10-22',
-    status: 'Pending',
-    attempts: 1,
-    nextAttempt: '2023-10-25',
-  },
-  {
-    id: '2',
-    customerName: 'Oscorp',
-    email: 'norman@oscorp.com',
-    failedAmount: 119,
-    failureDate: '2023-10-17',
-    status: 'Pending',
-    attempts: 2,
-    nextAttempt: '2023-10-24',
-  },
-  {
-    id: '3',
-    customerName: 'Dunder Mifflin',
-    email: 'michael@dundermifflin.com',
-    failedAmount: 59,
-    failureDate: '2023-10-05',
-    status: 'Recovered',
-    attempts: 3,
-    nextAttempt: null,
-  },
-  {
-    id: '4',
-    customerName: 'Cyberdyne Systems',
-    email: 'miles@cyberdyne.com',
-    failedAmount: 119,
-    failureDate: '2023-09-28',
-    status: 'Failed',
-    attempts: 6,
-    nextAttempt: null,
-  },
-];
+  name: string;
+  status: 'completed' | 'active' | 'draft';
+  targetSegment: string;
+  customersCount: number;
+  recoveryGoal: number;
+  recoveryAchieved: number;
+  successRate: number;
+}
 
 export default function RecoveryPage() {
-  const [recoveryAttempts] = useState<RecoveryAttempt[]>(mockRecoveryAttempts);
-  const [statusFilter, setStatusFilter] = useState<string>('all');
-
-  const filteredAttempts = recoveryAttempts.filter((attempt) => {
-    return statusFilter === 'all' || attempt.status.toLowerCase() === statusFilter.toLowerCase();
+  const [campaigns, setCampaigns] = useState<RecoveryCampaign[]>([]);
+  const [metrics, setMetrics] = useState({
+    totalRecovered: 0,
+    recoveryRate: 0
   });
+  const [isLoading, setIsLoading] = useState(true);
+  const { toast } = useToast();
 
-  // Calculate stats
-  const totalAtRisk = recoveryAttempts.reduce((sum, attempt) => {
-    if (attempt.status !== 'Recovered') {
-      return sum + attempt.failedAmount;
-    }
-    return sum;
-  }, 0);
+  useEffect(() => {
+    const fetchRecoveryData = async () => {
+      try {
+        setIsLoading(true);
+        
+        const { data } = await analyzeRecoveryPerformance();
+        
+        if (data) {
+          setCampaigns(data.campaignPerformance || []);
+          setMetrics({
+            totalRecovered: data.totalRecovered || 0,
+            recoveryRate: data.recoveryRate || 0
+          });
+        }
+      } catch (error) {
+        console.error('Error fetching recovery performance:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load recovery data. Please try again.",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
-  const totalRecovered = recoveryAttempts
-    .filter(attempt => attempt.status === 'Recovered')
-    .reduce((sum, attempt) => sum + attempt.failedAmount, 0);
+    fetchRecoveryData();
+  }, [toast]);
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'Pending':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'Recovered':
-        return 'bg-green-100 text-green-800';
-      case 'Failed':
-        return 'bg-red-100 text-red-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
+  const handleViewDetails = (campaignId: string) => {
+    // In a full implementation, this would navigate to a campaign detail page or open a modal
+    toast({
+      title: "Campaign Details",
+      description: `Viewing details for campaign ${campaignId}`,
+    });
+  };
+
+  const handleCreateCampaign = () => {
+    // In a full implementation, this would navigate to a campaign creation page or open a modal
+    toast({
+      title: "Create Campaign",
+      description: "This would open a campaign creation flow in a full implementation.",
+    });
   };
 
   return (
     <div>
-      <h1 className="text-2xl font-semibold text-gray-800 mb-6">Payment Recovery</h1>
-      
-      {/* Stats overview */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        <div className="bg-white rounded-lg shadow p-6">
-          <h3 className="text-sm font-medium text-gray-500">Total Failed Payments</h3>
-          <p className="text-3xl font-semibold text-gray-800 mt-2">{recoveryAttempts.length}</p>
-        </div>
-        <div className="bg-white rounded-lg shadow p-6">
-          <h3 className="text-sm font-medium text-gray-500">At-Risk Revenue</h3>
-          <p className="text-3xl font-semibold text-gray-800 mt-2">${totalAtRisk}</p>
-        </div>
-        <div className="bg-white rounded-lg shadow p-6">
-          <h3 className="text-sm font-medium text-gray-500">Recovered Revenue</h3>
-          <p className="text-3xl font-semibold text-gray-800 mt-2">${totalRecovered}</p>
-        </div>
-        <div className="bg-white rounded-lg shadow p-6">
-          <h3 className="text-sm font-medium text-gray-500">Recovery Rate</h3>
-          <p className="text-3xl font-semibold text-gray-800 mt-2">
-            {recoveryAttempts.length > 0
-              ? Math.round(
-                  (recoveryAttempts.filter((a) => a.status === 'Recovered').length /
-                    recoveryAttempts.length) *
-                    100
-                )
-              : 0}
-            %
+      <div className="flex justify-between items-center mb-6">
+        <div>
+          <h1 className="text-2xl font-semibold text-gray-800 mb-2">Recovery Campaigns</h1>
+          <p className="text-gray-600">
+            Recover lost revenue with AI-powered win-back campaigns.
           </p>
         </div>
-      </div>
-      
-      {/* Recovery strategies */}
-      <div className="bg-white p-6 rounded-lg shadow-md mb-8">
-        <h2 className="text-lg font-medium text-gray-800 mb-4">Automated Recovery Workflows</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="border rounded-lg p-4 bg-blue-50 border-blue-200">
-            <h3 className="font-medium text-blue-800 mb-2">Dunning Emails</h3>
-            <p className="text-sm text-blue-700">
-              Automatic payment retry and customer notification sequence over 14 days.
-            </p>
-            <p className="text-sm font-medium text-blue-800 mt-2">Success rate: 65%</p>
-          </div>
-          <div className="border rounded-lg p-4 bg-blue-50 border-blue-200">
-            <h3 className="font-medium text-blue-800 mb-2">SMS Reminders</h3>
-            <p className="text-sm text-blue-700">
-              Direct text message alerts for payment failures with update payment link.
-            </p>
-            <p className="text-sm font-medium text-blue-800 mt-2">Success rate: 48%</p>
-          </div>
-          <div className="border rounded-lg p-4 bg-blue-50 border-blue-200">
-            <h3 className="font-medium text-blue-800 mb-2">Card Updater</h3>
-            <p className="text-sm text-blue-700">
-              Automated card information updates through card network connections.
-            </p>
-            <p className="text-sm font-medium text-blue-800 mt-2">Success rate: 72%</p>
-          </div>
-        </div>
-      </div>
-      
-      {/* Filters */}
-      <div className="flex justify-end mb-6">
-        <select
-          className="px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
+        <button
+          onClick={handleCreateCampaign}
+          className="px-4 py-2 bg-brand-green text-white rounded-md hover:bg-brand-green-600 flex items-center"
         >
-          <option value="all">All Statuses</option>
-          <option value="pending">Pending</option>
-          <option value="recovered">Recovered</option>
-          <option value="failed">Failed</option>
-        </select>
+          <Plus className="h-4 w-4 mr-2" />
+          New Campaign
+        </button>
       </div>
-      
-      {/* Recovery attempts table */}
-      <div className="bg-white shadow rounded-lg overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Customer
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Failed Amount
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Failure Date
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Status
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Attempts
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Next Attempt
-                </th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {filteredAttempts.map((attempt) => (
-                <tr key={attempt.id}>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center">
-                      <div>
-                        <div className="text-sm font-medium text-gray-900">{attempt.customerName}</div>
-                        <div className="text-sm text-gray-500">{attempt.email}</div>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    ${attempt.failedAmount}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {attempt.failureDate}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(attempt.status)}`}>
-                      {attempt.status}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {attempt.attempts}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {attempt.nextAttempt || 'N/A'}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <a href="#" className="text-blue-600 hover:text-blue-900 mr-3">
-                      Contact
-                    </a>
-                    <a href="#" className="text-blue-600 hover:text-blue-900">
-                      Manage
-                    </a>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+
+      {/* Summary stats */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+        <div className="bg-white rounded-lg shadow p-6 border border-gray-200">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-sm font-medium text-gray-500">Total Recovered</h3>
+              <p className="text-3xl font-semibold text-gray-800 mt-2">
+                {isLoading ? '-' : `$${metrics.totalRecovered.toLocaleString()}`}
+              </p>
+            </div>
+            <BarChart4 className="h-12 w-12 text-blue-100" />
+          </div>
+        </div>
+        <div className="bg-white rounded-lg shadow p-6 border border-gray-200">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-sm font-medium text-gray-500">Recovery Rate</h3>
+              <p className="text-3xl font-semibold text-gray-800 mt-2">
+                {isLoading ? '-' : `${metrics.recoveryRate}%`}
+              </p>
+            </div>
+            <Sparkles className="h-12 w-12 text-green-100" />
+          </div>
         </div>
       </div>
+
+      {/* AI-powered recovery suggestion */}
+      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-6 border border-blue-100 mb-8">
+        <div className="flex items-start">
+          <div className="bg-blue-100 rounded-full p-3 mr-4">
+            <Sparkles className="h-6 w-6 text-blue-600" />
+          </div>
+          <div>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">AI Recovery Insight</h3>
+            <p className="text-gray-700 mb-3">
+              Based on your current data, targeting customers who have canceled within the last 30 days
+              with a special 20% discount offer would likely yield a 40% recovery rate, recovering approximately $3,500 in MRR.
+            </p>
+            <button
+              onClick={() => toast({ 
+                title: "Campaign Created", 
+                description: "An AI-optimized campaign has been created based on this recommendation." 
+              })}
+              className="px-4 py-2 bg-blue-100 text-blue-800 rounded-md hover:bg-blue-200 text-sm font-medium"
+            >
+              Create AI-Optimized Campaign
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Campaigns grid */}
+      {isLoading ? (
+        <div className="flex justify-center py-10">
+          <div className="animate-spin h-10 w-10 border-4 border-blue-500 border-t-transparent rounded-full"></div>
+        </div>
+      ) : campaigns.length > 0 ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {campaigns.map((campaign) => (
+            <RecoveryCampaignCard
+              key={campaign.id}
+              campaign={campaign}
+              onViewDetails={handleViewDetails}
+            />
+          ))}
+        </div>
+      ) : (
+        <div className="text-center py-10 bg-gray-50 rounded-lg border border-gray-200">
+          <p className="text-gray-500 mb-4">No recovery campaigns yet.</p>
+          <button
+            onClick={handleCreateCampaign}
+            className="px-4 py-2 bg-brand-green text-white rounded-md hover:bg-brand-green-600"
+          >
+            Create Your First Campaign
+          </button>
+        </div>
+      )}
     </div>
   );
 }
