@@ -25,5 +25,17 @@ export default defineConfig(({ mode }) => ({
   build: {
     outDir: 'dist',
     sourcemap: true,
+  },
+  optimizeDeps: {
+    esbuildOptions: {
+      // Fix for TypeScript configuration issues
+      tsconfigRaw: {
+        compilerOptions: {
+          experimentalDecorators: true,
+          importsNotUsedAsValues: 'remove',
+          target: 'es2020'
+        }
+      }
+    }
   }
 }));
