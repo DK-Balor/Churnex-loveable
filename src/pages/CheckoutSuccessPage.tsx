@@ -21,17 +21,25 @@ export default function CheckoutSuccessPage() {
   useEffect(() => {
     // Process the checkout success
     const processCheckoutSuccess = async () => {
-      if (!sessionId || !user) {
-        setError('Invalid checkout session. Please try again or contact support.');
+      if (!sessionId) {
+        setError('Missing checkout session ID. Please try again or contact support.');
+        setIsProcessing(false);
+        return;
+      }
+      
+      if (!user) {
+        setError('User authentication required. Please log in and try again.');
         setIsProcessing(false);
         return;
       }
 
       try {
+        console.log(`Processing checkout success for session ${sessionId} and user ${user.id}`);
         const result = await handleCheckoutSuccess(sessionId, user.id);
         
         if (result.success) {
           setPlan(result.plan);
+          console.log(`Subscription successfully activated: ${result.plan} plan, status: ${result.status}`);
           
           toast({
             title: "Subscription activated",
@@ -44,6 +52,7 @@ export default function CheckoutSuccessPage() {
             navigate('/dashboard');
           }, 5000);
         } else {
+          console.error('Subscription verification failed:', result);
           setError('Your subscription could not be verified. Please contact support if you believe this is an error.');
         }
       } catch (error: any) {

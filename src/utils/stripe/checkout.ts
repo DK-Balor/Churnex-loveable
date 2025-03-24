@@ -9,15 +9,25 @@ export const createCheckoutSession = async (priceId: string) => {
     // Make sure the priceId is in the expected format for the edge function
     const formattedPriceId = priceId.startsWith('price_') ? priceId : `price_${priceId}`;
     
-    // Call our Supabase Edge Function
-    const { data, error } = await supabase.functions.invoke('create-checkout', {
+    // Call our Supabase Edge Function with improved logging
+    console.log('Calling create-checkout with:', { 
+      priceId: formattedPriceId,
+      isTestMode: true, // Explicitly tell the edge function we're in test mode
+      successUrl: window.location.origin + '/checkout-success?session_id={CHECKOUT_SESSION_ID}',
+      cancelUrl: window.location.origin + '/checkout?cancelled=true'
+    });
+    
+    const { data, error, status } = await supabase.functions.invoke('create-checkout', {
       body: { 
         priceId: formattedPriceId,
+        isTestMode: true, // Explicitly tell the edge function we're in test mode
         successUrl: window.location.origin + '/checkout-success?session_id={CHECKOUT_SESSION_ID}',
         cancelUrl: window.location.origin + '/checkout?cancelled=true'
       }
     });
-
+    
+    console.log('Edge function response status:', status);
+    
     if (error) {
       console.error('Function error:', error);
       throw new Error(`Failed to create checkout session: ${error.message}`);
