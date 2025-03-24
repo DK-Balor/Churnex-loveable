@@ -12,6 +12,7 @@ import RecoveryPage from './pages/RecoveryPage';
 import ChurnPredictionPage from './pages/ChurnPredictionPage';
 import SettingsPage from './pages/SettingsPage';
 import CheckoutPage from './pages/CheckoutPage';
+import CheckoutSuccessPage from './pages/CheckoutSuccessPage';
 import { Toaster } from './components/ui/toaster';
 
 // Protected route component
@@ -45,6 +46,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <CheckoutPage />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/checkout-success" 
+            element={
+              <ProtectedRoute>
+                <CheckoutSuccessPage />
               </ProtectedRoute>
             } 
           />
