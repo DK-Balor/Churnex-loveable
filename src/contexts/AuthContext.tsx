@@ -1,6 +1,7 @@
+
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
-import { supabase, sendVerificationEmail } from '../integrations/supabase/client';
+import { supabase, signUpUser } from '../integrations/supabase/client';
 import { useToast } from '../components/ui/use-toast';
 import { AuthContextType } from '../types/auth';
 import { checkSessionExpiry, updateUserActivity, trackUserLogin } from '../utils/authUtils';
@@ -12,7 +13,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [emailConfirmed, setEmailConfirmed] = useState<boolean>(true);
   const { toast } = useToast();
   const { profile, isProfileLoading, updateProfile } = useProfile(user);
 
@@ -36,13 +36,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         setSession(session);
         setUser(session?.user ?? null);
-        
-        // Check if email is confirmed
-        if (session?.user) {
-          setEmailConfirmed(session.user.email_confirmed_at !== null);
-          console.log('Email confirmed at:', session.user.email_confirmed_at);
-        }
-        
         setIsLoading(false);
         
         // Update user activity when session changes
@@ -52,7 +45,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         if (event === 'SIGNED_IN') {
           toast({
-            title: "Welcome back!",
+            title: "Welcome!",
             description: `You're now signed in as ${session?.user?.email}`,
           });
           
@@ -65,15 +58,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             title: "Signed out",
             description: "You have been signed out successfully.",
           });
-        } else if (event === 'USER_UPDATED') {
-          // Check if email is confirmed after update
-          if (session?.user && session.user.email_confirmed_at) {
-            setEmailConfirmed(true);
-            toast({
-              title: "Email verified",
-              description: "Your email has been successfully verified.",
-            });
-          }
         }
       }
     );
@@ -96,13 +80,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       setSession(session);
       setUser(session?.user ?? null);
-      
-      // Check if email is confirmed for existing session
-      if (session?.user) {
-        setEmailConfirmed(session.user.email_confirmed_at !== null);
-        console.log('Existing user email confirmed at:', session.user.email_confirmed_at);
-      }
-      
       setIsLoading(false);
       
       // Update user activity on initial load if user is logged in
@@ -144,14 +121,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       if (error) {
         console.error('Sign in error:', error);
-        
-        // Handle specific error for unverified email
-        if (error.message.includes('Email not confirmed')) {
-          setEmailConfirmed(false);
-          // Don't show toast here since we'll show the verification UI instead
-          return { error, emailVerificationNeeded: true };
-        }
-        
         toast({
           title: "Authentication failed",
           description: error.message,
@@ -171,126 +140,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const verifyEmail = async (email: string, token: string) => {
-    try {
-      console.log('Verifying email with token:', token);
-      const { error } = await supabase.auth.verifyOtp({
-        email,
-        token,
-        type: 'signup'
-      });
-      
-      if (error) {
-        console.error('Email verification error:', error);
-        toast({
-          title: "Verification failed",
-          description: error.message,
-          variant: "destructive",
-        });
-        return { error };
-      }
-      
-      setEmailConfirmed(true);
-      toast({
-        title: "Email verified",
-        description: "Your email has been successfully verified.",
-      });
-      
-      return { error: null };
-    } catch (error) {
-      console.error('Email verification exception:', error);
-      toast({
-        title: "Verification error",
-        description: "An unexpected error occurred during email verification.",
-        variant: "destructive",
-      });
-      return { error: error as Error };
-    }
-  };
-
-  const resendVerificationEmail = async (email: string) => {
-    try {
-      console.log('Resending verification email to:', email);
-      // Use the helper function we created with emailRedirectTo
-      const { error } = await sendVerificationEmail(email);
-      
-      if (error) {
-        console.error('Error resending verification email:', error);
-        toast({
-          title: "Error",
-          description: error.message,
-          variant: "destructive",
-        });
-        return { error };
-      }
-      
-      toast({
-        title: "Verification email sent",
-        description: "Please check your inbox (and spam folder) for the verification link.",
-      });
-      
-      return { error: null };
-    } catch (error) {
-      console.error('Exception resending verification email:', error);
-      toast({
-        title: "Error",
-        description: "Failed to send verification email. Please try again.",
-        variant: "destructive",
-      });
-      return { error: error as Error };
-    }
-  };
-
   const signUp = async (email: string, password: string, fullName: string, businessName: string) => {
     try {
-      console.log('Signing up user:', email);
+      console.log('Signing up user directly:', email);
       
-      // First create the user with password
-      const response = await supabase.auth.signUp({ 
-        email, 
-        password,
-        options: {
-          data: {
-            full_name: fullName,
-            business_name: businessName
-          },
-          emailRedirectTo: 'https://churnex.lovable.app/auth',
-          // Set session expiry to 24 hours
-          expiresIn: 24 * 60 * 60
-        }
-      });
+      // Use the new signUpUser function that doesn't require email verification
+      const { error, data } = await signUpUser(email, password, fullName, businessName);
 
-      if (response.error) {
-        console.error('Sign up error:', response.error);
+      if (error) {
+        console.error('Sign up error:', error);
         toast({
           title: "Signup failed",
-          description: response.error.message,
+          description: error.message,
           variant: "destructive",
         });
-        return { error: response.error, data: null };
+        return { error, data: null };
       } 
       
-      if (response.data.user) {
-        console.log('User created:', response.data.user.id);
-        setEmailConfirmed(false);
-        
-        // Create the user profile
-        await supabase.from('user_metadata').insert([{
-          id: response.data.user.id,
-          full_name: fullName,
-          business_name: businessName,
-          trial_ends_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // 7-day trial
-          last_login_at: new Date().toISOString(),
-          login_count: 1
-        }]);
-        
-        // After creating the user, explicitly send a verification email
-        await sendVerificationEmail(email);
-        
-        console.log('Signup successful, verification email sent explicitly');
-      }
+      console.log('Signup successful, user should be logged in automatically');
+      toast({
+        title: "Account created",
+        description: "Your account has been created and you are now logged in.",
+      });
 
-      return { error: response.error, data: response.data };
+      return { error: null, data };
     } catch (error) {
       console.error('Sign up exception:', error);
       toast({
@@ -321,14 +194,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     profile,
     isLoading,
     isProfileLoading,
-    emailConfirmed,
     signIn,
     signUp,
     signOut,
-    resendVerificationEmail,
-    verifyEmail,
-    updateProfile,
-    setEmailConfirmed
+    updateProfile
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

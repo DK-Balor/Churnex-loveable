@@ -23,32 +23,47 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseKey, {
   }
 });
 
-// Add a helper function to handle email verification
-export const sendVerificationEmail = async (email: string) => {
+// Helper function to sign up a user directly without verification
+export const signUpUser = async (email: string, password: string, fullName: string, businessName: string) => {
   try {
-    console.log('Sending verification email to:', email);
+    console.log('Signing up user directly:', email);
     
-    const redirectUrl = `${SITE_URL}/auth`;
-    console.log('Using redirect URL:', redirectUrl);
-    
-    // Use signInWithOtp instead of signUp for more reliable email delivery
-    const { error } = await supabase.auth.signInWithOtp({
-      email,
+    const { data, error } = await supabase.auth.signUp({ 
+      email, 
+      password,
       options: {
-        emailRedirectTo: redirectUrl,
-        shouldCreateUser: true
+        data: {
+          full_name: fullName,
+          business_name: businessName
+        },
+        // Set session expiry to 24 hours
+        expiresIn: SESSION_EXPIRY
       }
     });
     
     if (error) {
-      console.error('Error sending verification email:', error);
+      console.error('Sign up error:', error);
       return { error };
     }
     
-    console.log('Verification email sent successfully');
-    return { error: null };
+    // Create the user profile if signup was successful
+    if (data.user) {
+      console.log('User created:', data.user.id);
+      
+      // Create the user profile
+      await supabase.from('user_metadata').insert([{
+        id: data.user.id,
+        full_name: fullName,
+        business_name: businessName,
+        trial_ends_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // 7-day trial
+        last_login_at: new Date().toISOString(),
+        login_count: 1
+      }]);
+    }
+    
+    return { error: null, data };
   } catch (error) {
-    console.error('Exception sending verification email:', error);
+    console.error('Sign up exception:', error);
     return { error: error as Error };
   }
 };
