@@ -47,11 +47,13 @@ export default defineConfig(({ mode }) => ({
       extensions: ['.js', '.jsx', '.ts', '.tsx']
     }
   },
+  // Override the project references for tsconfig.node.json
+  // This is the key fix for the TS6310 error
   optimizeDeps: {
     esbuildOptions: {
       target: 'es2020',
-      // Ensure proper TypeScript handling
-      tsconfigRaw: {
+      // Override tsconfig settings for build time
+      tsconfigRaw: JSON.stringify({
         compilerOptions: {
           experimentalDecorators: true,
           target: 'es2020',
@@ -59,20 +61,23 @@ export default defineConfig(({ mode }) => ({
           module: 'esnext',
           moduleResolution: 'node',
           isolatedModules: true,
-          noEmit: false, // Override noEmit to fix the reference issue
+          noEmit: false, // Explicitly override noEmit
+          jsx: 'react-jsx',
+          skipLibCheck: true
         }
-      }
+      })
     }
   },
   esbuild: {
     target: 'es2020',
     // Enhanced TypeScript support
-    tsconfigRaw: {
+    tsconfigRaw: JSON.stringify({
       compilerOptions: {
         target: 'es2020',
         module: 'esnext',
-        noEmit: false // Explicitly override noEmit
+        noEmit: false, // Explicitly override noEmit
+        jsx: 'react-jsx'
       }
-    }
+    })
   }
 }));
