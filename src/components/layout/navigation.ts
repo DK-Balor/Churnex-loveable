@@ -1,22 +1,52 @@
 
-import { 
-  BarChart3, 
-  Users, 
-  Clock, 
-  RefreshCw, 
-  AlertTriangle,
-  Settings, 
-  Home,
-  LineChart
-} from 'lucide-react';
-import { NavigationItem } from './types';
+import { Home, BarChart2, Users, RefreshCw, Settings, CreditCard, Zap, Database } from 'lucide-react';
 
-export const dashboardNavigation: NavigationItem[] = [
-  { name: 'Dashboard', href: '/dashboard', icon: Home },
-  { name: 'Customers', href: '/dashboard/customers', icon: Users },
-  { name: 'Subscriptions', href: '/dashboard/subscriptions', icon: Clock },
-  { name: 'Recovery', href: '/dashboard/recovery', icon: RefreshCw },
-  { name: 'Churn Prediction', href: '/dashboard/churn-prediction', icon: AlertTriangle },
-  { name: 'Analytics', href: '/dashboard/analytics', icon: LineChart },
-  { name: 'Settings', href: '/dashboard/settings', icon: Settings },
+export interface NavItem {
+  title: string;
+  href: string;
+  icon: any;
+  submenu?: NavItem[];
+}
+
+export const navigation: NavItem[] = [
+  {
+    title: 'Dashboard',
+    href: '/dashboard',
+    icon: Home
+  },
+  {
+    title: 'Customers',
+    href: '/customers',
+    icon: Users
+  },
+  {
+    title: 'Analytics',
+    href: '/analytics',
+    icon: BarChart2
+  },
+  {
+    title: 'Subscriptions',
+    href: '/subscriptions',
+    icon: CreditCard
+  },
+  {
+    title: 'Churn Prediction',
+    href: '/churn-prediction',
+    icon: Zap
+  },
+  {
+    title: 'Recovery',
+    href: '/recovery',
+    icon: RefreshCw
+  },
+  {
+    title: 'Integrations',
+    href: '/integrations',
+    icon: Database
+  },
+  {
+    title: 'Settings',
+    href: '/settings',
+    icon: Settings
+  },
 ];

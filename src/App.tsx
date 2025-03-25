@@ -1,94 +1,47 @@
-
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import LandingPage from './pages/LandingPage';
 import AuthPage from './pages/AuthPage';
-import DashboardLayout from './components/layout/DashboardLayout';
 import DashboardPage from './pages/DashboardPage';
 import CustomersPage from './pages/CustomersPage';
-import SubscriptionsPage from './pages/SubscriptionsPage';
-import RecoveryPage from './pages/RecoveryPage';
-import ChurnPredictionPage from './pages/ChurnPredictionPage';
 import AnalyticsPage from './pages/AnalyticsPage';
+import SubscriptionsPage from './pages/SubscriptionsPage';
+import ChurnPredictionPage from './pages/ChurnPredictionPage';
+import RecoveryPage from './pages/RecoveryPage';
 import SettingsPage from './pages/SettingsPage';
 import CheckoutPage from './pages/CheckoutPage';
 import CheckoutSuccessPage from './pages/CheckoutSuccessPage';
+import { AuthProvider } from './contexts/AuthContext';
+import DashboardLayout from './components/layout/DashboardLayout';
 import { Toaster } from './components/ui/toaster';
-
-// Protected route component
-const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  const { user, isLoading } = useAuth();
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-green mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!user) {
-    return <Navigate to="/auth" replace />;
-  }
-
-  return <>{children}</>;
-};
+import IntegrationsPage from './pages/IntegrationsPage';
+import StripeCallbackPage from './pages/StripeCallbackPage';
 
 function App() {
   return (
-    <AuthProvider>
-      <Router>
+    <BrowserRouter>
+      <AuthProvider>
         <Routes>
           <Route path="/" element={<LandingPage />} />
           <Route path="/auth" element={<AuthPage />} />
+          <Route path="/checkout" element={<CheckoutPage />} />
+          <Route path="/checkout/success" element={<CheckoutSuccessPage />} />
+          <Route path="/stripe-callback" element={<StripeCallbackPage />} />
           
-          <Route 
-            path="/checkout" 
-            element={
-              <ProtectedRoute>
-                <CheckoutPage />
-              </ProtectedRoute>
-            } 
-          />
-          <Route 
-            path="/checkout-success" 
-            element={
-              <ProtectedRoute>
-                <CheckoutSuccessPage />
-              </ProtectedRoute>
-            } 
-          />
-          
-          {/* Protected dashboard routes */}
-          <Route
-            path="/dashboard"
-            element={
-              <ProtectedRoute>
-                <DashboardLayout />
-              </ProtectedRoute>
-            }
-          >
-            <Route index element={<DashboardPage />} />
-            <Route path="customers" element={<CustomersPage />} />
-            <Route path="subscriptions" element={<SubscriptionsPage />} />
-            <Route path="recovery" element={<RecoveryPage />} />
-            <Route path="churn-prediction" element={<ChurnPredictionPage />} />
-            <Route path="analytics" element={<AnalyticsPage />} />
-            <Route path="settings" element={<SettingsPage />} />
+          <Route element={<DashboardLayout />}>
+            <Route path="/dashboard" element={<DashboardPage />} />
+            <Route path="/customers" element={<CustomersPage />} />
+            <Route path="/analytics" element={<AnalyticsPage />} />
+            <Route path="/subscriptions" element={<SubscriptionsPage />} />
+            <Route path="/churn-prediction" element={<ChurnPredictionPage />} />
+            <Route path="/recovery" element={<RecoveryPage />} />
+            <Route path="/integrations" element={<IntegrationsPage />} />
+            <Route path="/settings" element={<SettingsPage />} />
           </Route>
-          
-          {/* Catch-all route */}
-          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
-        
-        {/* Toast notifications */}
         <Toaster />
-      </Router>
-    </AuthProvider>
+      </AuthProvider>
+    </BrowserRouter>
   );
 }
 
