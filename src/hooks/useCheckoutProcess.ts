@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -8,7 +9,6 @@ import {
   handleCheckoutSuccess,
   CheckoutError
 } from '../utils/stripe';
-import { supabase } from '../integrations/supabase/client';
 
 export interface CheckoutMessage {
   type: 'success' | 'error';
@@ -144,43 +144,27 @@ export const useCheckoutProcess = () => {
     
     try {
       console.log('[CHECKOUT] Creating checkout session for plan:', selectedPlan);
-      console.log('[CHECKOUT] User ID:', user.id);
-      console.log('[CHECKOUT] User email:', user.email);
       
-      // Log the Supabase auth headers for debugging
-      const getAuthHeaders = async () => {
-        const { data } = await supabase.auth.getSession();
-        if (data.session) {
-          console.log('[CHECKOUT] Auth session found, token length:', 
-            data.session.access_token ? data.session.access_token.length : 'no token');
-        } else {
-          console.error('[CHECKOUT] No auth session found!');
-        }
-      };
-      
-      await getAuthHeaders();
-      
-      console.log('[CHECKOUT] About to create checkout session...');
-      
+      // Direct redirect to Stripe
       const { url } = await createCheckoutSession(selectedPlan);
       
       if (url) {
         console.log('[CHECKOUT] Redirecting to Stripe checkout URL:', url);
         // Redirect to Stripe Checkout
         window.location.href = url;
+        return; // Important: return early to prevent further code execution
       } else {
-        console.error('[CHECKOUT] No checkout URL returned from createCheckoutSession');
         throw new CheckoutError('No checkout URL returned', 'no_checkout_url');
       }
     } catch (error) {
       console.error('[CHECKOUT] Error creating checkout session:', error);
       
-      let errorMessage = 'Unable to connect to the payment service. Please try again later.';
+      let errorMessage = 'There was a problem connecting to our payment service. Please try again later.';
       
       // Extract more specific error messages from CheckoutError
       if (error instanceof CheckoutError) {
         if (error.code === 'edge_function_error') {
-          errorMessage = 'Unable to connect to the payment service. Please try again later.';
+          errorMessage = 'There was a problem connecting to our payment service. Please try again later.';
         } else if (error.code === 'no_checkout_url') {
           errorMessage = 'Unable to create a checkout session. Please try again later.';
         } else if (error.code === 'invalid_price_id') {

@@ -63,14 +63,18 @@ export const createCheckoutSession = async (
     return session;
   } catch (error) {
     console.error("Error creating checkout session:", error);
-    console.error("Error details:", {
-      message: error.message,
-      type: error.type,
-      code: error.code,
-      param: error.param,
-      statusCode: error.statusCode
-    });
     
-    throw error; // Return the original error for proper handling
+    // Log error details for debugging
+    if (error && typeof error === 'object') {
+      console.error("Error details:", {
+        message: error.message,
+        type: error.type,
+        code: error.code,
+        param: error.param,
+        statusCode: error.statusCode
+      });
+    }
+    
+    throw error; // Rethrow the error for proper handling upstream
   }
 };

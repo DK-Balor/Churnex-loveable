@@ -19,7 +19,7 @@ export default defineConfig(({ mode }) => ({
     host: "::",
     port: 8080,
     cors: true,
-    allowedHosts: 'all', // Using 'all' as a string is valid in Vite 3+
+    allowedHosts: ["all"], // Fix: Changed from string to array
   },
   build: {
     sourcemap: true,

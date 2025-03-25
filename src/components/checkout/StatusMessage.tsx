@@ -1,61 +1,39 @@
 
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
-import { AlertCircle, CheckCircle, ArrowLeft } from 'lucide-react';
+import { AlertCircle, CheckCircle } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { CheckoutMessage } from '../../hooks/useCheckoutProcess';
 
 interface StatusMessageProps {
-  message: {
-    type: 'success' | 'error';
-    text: string;
-  };
+  message: CheckoutMessage;
 }
 
 const StatusMessage: React.FC<StatusMessageProps> = ({ message }) => {
-  const navigate = useNavigate();
-
-  // Determine if we should show technical details (only in development)
-  const isDevelopment = process.env.NODE_ENV === 'development';
-
+  const isSuccess = message.type === 'success';
+  
   return (
-    <div className="max-w-3xl mx-auto p-8 mt-12">
-      <div 
-        className={`p-6 rounded-lg mb-8 flex flex-col items-center text-center ${
-          message.type === 'success' 
-            ? 'bg-green-50 border border-green-100' 
-            : 'bg-red-50 border border-red-100'
-        }`}
-      >
-        <div className="mb-4">
-          {message.type === 'success' ? (
-            <CheckCircle className="h-12 w-12 text-green-500" />
+    <div className="max-w-3xl mx-auto py-20 px-4">
+      <div className="text-center">
+        <div className={`p-6 rounded-lg mb-8 ${isSuccess ? 'bg-green-50' : 'bg-red-50'}`}>
+          {isSuccess ? (
+            <CheckCircle className="h-12 w-12 mx-auto mb-4 text-green-500" />
           ) : (
-            <AlertCircle className="h-12 w-12 text-red-500" />
+            <AlertCircle className="h-12 w-12 mx-auto mb-4 text-red-500" />
           )}
+          
+          <h1 className={`text-2xl font-bold mb-4 ${isSuccess ? 'text-green-700' : 'text-red-700'}`}>
+            {isSuccess ? 'Success!' : 'Something went wrong'}
+          </h1>
+          
+          <p className="mb-4">{message.text}</p>
         </div>
-        <h2 className={`text-xl font-semibold mb-2 ${
-          message.type === 'success' ? 'text-green-700' : 'text-red-700'
-        }`}>
-          {message.type === 'success' ? 'Success' : 'Something went wrong'}
-        </h2>
-        <p className={`text-${message.type === 'success' ? 'green' : 'red'}-600`}>
-          {message.text}
-        </p>
         
-        {message.type === 'error' && !message.text.includes('contact support') && (
-          <div className="mt-4 text-sm text-red-600">
-            <p>Please try again or contact our support team if the issue persists.</p>
-          </div>
-        )}
-      </div>
-      
-      <div className="flex justify-center">
-        <button
-          onClick={() => navigate('/dashboard')}
-          className="flex items-center px-6 py-3 bg-brand-dark-800 text-white rounded-md hover:bg-brand-dark-700 transition-colors"
+        <Link
+          to="/dashboard"
+          className="px-6 py-3 bg-brand-dark-800 text-white rounded-md hover:bg-brand-dark-700 inline-block"
         >
-          <ArrowLeft className="h-4 w-4 mr-2" />
           Return to Dashboard
-        </button>
+        </Link>
       </div>
     </div>
   );

@@ -93,7 +93,6 @@ const invokeEdgeFunction = async <T>(functionName: string, payload: any): Promis
       );
     }
     
-    console.log(`${functionName} returned data:`, data);
     return data as T;
   } catch (error) {
     console.error(`[${new Date().toISOString()}] Error in invokeEdgeFunction:`, error);
@@ -102,7 +101,6 @@ const invokeEdgeFunction = async <T>(functionName: string, payload: any): Promis
       throw error;
     }
     
-    console.error(`Unexpected error in ${functionName}:`, error);
     throw new CheckoutError(
       error.message || `Unexpected error in ${functionName}`, 
       'unexpected_error'
@@ -117,21 +115,14 @@ const invokeEdgeFunction = async <T>(functionName: string, payload: any): Promis
  */
 export const createCheckoutSession = async (priceId: string): Promise<CheckoutSessionResponse> => {
   console.log('[CHECKOUT] Creating checkout session for price:', priceId);
-  console.log('[CHECKOUT] Browser information:', {
-    userAgent: navigator.userAgent,
-    language: navigator.language,
-    platform: navigator.platform
-  });
   
   if (!priceId) {
     throw new CheckoutError('Price ID is required', 'invalid_price_id');
   }
   
   const payload = buildCheckoutPayload(priceId);
-  console.log('[CHECKOUT] Built checkout payload:', payload);
   
   try {
-    console.log('[CHECKOUT] About to invoke create-checkout edge function');
     const data = await invokeEdgeFunction<CheckoutSessionResponse>('create-checkout', payload);
     
     if (!data.url) {
@@ -140,7 +131,6 @@ export const createCheckoutSession = async (priceId: string): Promise<CheckoutSe
     }
     
     console.log('[CHECKOUT] Checkout session created successfully with URL:', data.url);
-    console.log('[CHECKOUT] Session ID:', data.sessionId);
     return data;
   } catch (error) {
     console.error('[CHECKOUT] Error creating checkout session:', error);
