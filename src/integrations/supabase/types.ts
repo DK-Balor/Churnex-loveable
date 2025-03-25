@@ -150,6 +150,39 @@ export type Database = {
         }
         Relationships: []
       }
+      stripe_accounts: {
+        Row: {
+          account_email: string | null
+          account_id: string
+          account_name: string | null
+          created_at: string | null
+          id: string
+          livemode: boolean | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          account_email?: string | null
+          account_id: string
+          account_name?: string | null
+          created_at?: string | null
+          id?: string
+          livemode?: boolean | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          account_email?: string | null
+          account_id?: string
+          account_name?: string | null
+          created_at?: string | null
+          id?: string
+          livemode?: boolean | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       stripe_connections: {
         Row: {
           access_token: string | null
@@ -269,7 +302,14 @@ export type Database = {
           created_at: string | null
           full_name: string | null
           id: string
+          stripe_customer_id: string | null
+          stripe_subscription_id: string | null
+          subscription_cancel_at_period_end: boolean | null
+          subscription_created_at: string | null
+          subscription_current_period_end: string | null
+          subscription_payment_method: string | null
           subscription_plan: string | null
+          subscription_price_id: string | null
           trial_ends_at: string | null
           updated_at: string | null
         }
@@ -278,7 +318,14 @@ export type Database = {
           created_at?: string | null
           full_name?: string | null
           id: string
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
+          subscription_cancel_at_period_end?: boolean | null
+          subscription_created_at?: string | null
+          subscription_current_period_end?: string | null
+          subscription_payment_method?: string | null
           subscription_plan?: string | null
+          subscription_price_id?: string | null
           trial_ends_at?: string | null
           updated_at?: string | null
         }
@@ -287,7 +334,14 @@ export type Database = {
           created_at?: string | null
           full_name?: string | null
           id?: string
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
+          subscription_cancel_at_period_end?: boolean | null
+          subscription_created_at?: string | null
+          subscription_current_period_end?: string | null
+          subscription_payment_method?: string | null
           subscription_plan?: string | null
+          subscription_price_id?: string | null
           trial_ends_at?: string | null
           updated_at?: string | null
         }

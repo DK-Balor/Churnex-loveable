@@ -57,7 +57,7 @@ export const getCurrentSubscription = async (userId: string): Promise<Subscripti
       status: profile?.subscription_status || (profile?.subscription_plan ? 'active' : 'inactive'),
       plan: profile?.subscription_plan || null, // Default to null if none is set
       currentPeriodEnd: profile?.subscription_current_period_end || profile?.trial_ends_at || new Date().toISOString(),
-      isCanceled: profile?.subscription_status === 'canceled',
+      isCanceled: profile?.subscription_cancel_at_period_end || false,
       isTrialing: isTrialing,
       accountType: accountType,
       daysUntilExpiry

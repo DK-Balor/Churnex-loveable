@@ -1,3 +1,4 @@
+
 export type Json =
   | string
   | number
@@ -45,6 +46,14 @@ export interface Database {
           subscription_plan: string | null
           trial_ends_at: string | null
           updated_at: string | null
+          stripe_customer_id: string | null
+          stripe_subscription_id: string | null
+          subscription_price_id: string | null
+          subscription_payment_method: string | null
+          subscription_current_period_end: string | null
+          subscription_cancel_at_period_end: boolean | null
+          subscription_created_at: string | null
+          subscription_status: string | null
         }
         Insert: {
           business_name?: string | null
@@ -54,6 +63,14 @@ export interface Database {
           subscription_plan?: string | null
           trial_ends_at?: string | null
           updated_at?: string | null
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
+          subscription_price_id?: string | null
+          subscription_payment_method?: string | null
+          subscription_current_period_end?: string | null
+          subscription_cancel_at_period_end?: boolean | null
+          subscription_created_at?: string | null
+          subscription_status?: string | null
         }
         Update: {
           business_name?: string | null
@@ -63,11 +80,59 @@ export interface Database {
           subscription_plan?: string | null
           trial_ends_at?: string | null
           updated_at?: string | null
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
+          subscription_price_id?: string | null
+          subscription_payment_method?: string | null
+          subscription_current_period_end?: string | null
+          subscription_cancel_at_period_end?: boolean | null
+          subscription_created_at?: string | null
+          subscription_status?: string | null
         }
         Relationships: [
           {
             foreignKeyName: "user_metadata_id_fkey"
             columns: ["id"]
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      stripe_accounts: {
+        Row: {
+          id: string
+          user_id: string
+          account_id: string
+          account_name: string | null
+          account_email: string | null
+          livemode: boolean | null
+          created_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          account_id: string
+          account_name?: string | null
+          account_email?: string | null
+          livemode?: boolean | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          account_id?: string
+          account_name?: string | null
+          account_email?: string | null
+          livemode?: boolean | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stripe_accounts_user_id_fkey"
+            columns: ["user_id"]
             referencedRelation: "users"
             referencedColumns: ["id"]
           }

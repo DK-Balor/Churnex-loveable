@@ -31,8 +31,8 @@ export const connectStripeAccount = async (userId: string) => {
 export const getStripeConnectionStatus = async (userId: string): Promise<StripeConnectionStatus> => {
   try {
     const { data, error } = await supabase
-      .from('stripe_connections')
-      .select('account_id, connected, last_sync_at')
+      .from('stripe_accounts')
+      .select('account_id, livemode')
       .eq('user_id', userId)
       .single();
     
@@ -45,9 +45,9 @@ export const getStripeConnectionStatus = async (userId: string): Promise<StripeC
     }
     
     return {
-      connected: data.connected,
+      connected: true,
       account_id: data.account_id,
-      last_sync_at: data.last_sync_at
+      last_sync_at: null
     };
   } catch (error) {
     console.error('Error checking Stripe connection:', error);
