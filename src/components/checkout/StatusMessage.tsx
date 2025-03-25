@@ -13,6 +13,9 @@ interface StatusMessageProps {
 const StatusMessage: React.FC<StatusMessageProps> = ({ message }) => {
   const navigate = useNavigate();
 
+  // Determine if we should show technical details (only in development)
+  const isDevelopment = process.env.NODE_ENV === 'development';
+
   return (
     <div className="max-w-3xl mx-auto p-8 mt-12">
       <div 
@@ -37,6 +40,12 @@ const StatusMessage: React.FC<StatusMessageProps> = ({ message }) => {
         <p className={`text-${message.type === 'success' ? 'green' : 'red'}-600`}>
           {message.text}
         </p>
+        
+        {message.type === 'error' && (
+          <div className="mt-4 text-sm text-red-600">
+            <p>Please try again or contact our support team if the issue persists.</p>
+          </div>
+        )}
       </div>
       
       <div className="flex justify-center">
