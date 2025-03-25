@@ -75,6 +75,194 @@ export type Database = {
         }
         Relationships: []
       }
+      customers: {
+        Row: {
+          created_at: string | null
+          email: string | null
+          id: string
+          metadata: Json | null
+          name: string | null
+          phone: string | null
+          source: string
+          source_account: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          email?: string | null
+          id: string
+          metadata?: Json | null
+          name?: string | null
+          phone?: string | null
+          source: string
+          source_account?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          email?: string | null
+          id?: string
+          metadata?: Json | null
+          name?: string | null
+          phone?: string | null
+          source?: string
+          source_account?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      data_imports: {
+        Row: {
+          completed_at: string | null
+          created_at: string | null
+          error_message: string | null
+          id: string
+          metadata: Json | null
+          record_count: number | null
+          source: string
+          status: string | null
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string | null
+          error_message?: string | null
+          id?: string
+          metadata?: Json | null
+          record_count?: number | null
+          source: string
+          status?: string | null
+          user_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string | null
+          error_message?: string | null
+          id?: string
+          metadata?: Json | null
+          record_count?: number | null
+          source?: string
+          status?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      stripe_connections: {
+        Row: {
+          access_token: string | null
+          account_email: string | null
+          account_id: string
+          account_name: string | null
+          connected: boolean | null
+          created_at: string | null
+          last_sync_at: string | null
+          refresh_token: string | null
+          sync_error: string | null
+          sync_status: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          access_token?: string | null
+          account_email?: string | null
+          account_id: string
+          account_name?: string | null
+          connected?: boolean | null
+          created_at?: string | null
+          last_sync_at?: string | null
+          refresh_token?: string | null
+          sync_error?: string | null
+          sync_status?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          access_token?: string | null
+          account_email?: string | null
+          account_id?: string
+          account_name?: string | null
+          connected?: boolean | null
+          created_at?: string | null
+          last_sync_at?: string | null
+          refresh_token?: string | null
+          sync_error?: string | null
+          sync_status?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      subscriptions: {
+        Row: {
+          amount: number
+          cancel_at_period_end: boolean | null
+          canceled_at: string | null
+          created_at: string | null
+          currency: string | null
+          current_period_end: string | null
+          customer_id: string
+          id: string
+          plan_name: string
+          source: string
+          source_account: string | null
+          source_id: string | null
+          start_date: string
+          status: string
+          trial_end: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          cancel_at_period_end?: boolean | null
+          canceled_at?: string | null
+          created_at?: string | null
+          currency?: string | null
+          current_period_end?: string | null
+          customer_id: string
+          id: string
+          plan_name: string
+          source: string
+          source_account?: string | null
+          source_id?: string | null
+          start_date: string
+          status: string
+          trial_end?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          cancel_at_period_end?: boolean | null
+          canceled_at?: string | null
+          created_at?: string | null
+          currency?: string | null
+          current_period_end?: string | null
+          customer_id?: string
+          id?: string
+          plan_name?: string
+          source?: string
+          source_account?: string | null
+          source_id?: string | null
+          start_date?: string
+          status?: string
+          trial_end?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscriptions_customer_id_user_id_fkey"
+            columns: ["customer_id", "user_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id", "user_id"]
+          },
+        ]
+      }
       user_metadata: {
         Row: {
           business_name: string | null

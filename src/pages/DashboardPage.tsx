@@ -6,7 +6,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { Button } from '../components/ui/button';
 import { Database } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { getCurrentSubscription } from '../utils/stripe/subscription';
+import { supabase } from '../integrations/supabase/client';
 
 export default function DashboardPage() {
   const { profile, user } = useAuth();
@@ -21,20 +21,27 @@ export default function DashboardPage() {
   
   const checkUserData = async (userId: string) => {
     try {
-      // Get subscription status
-      const subscription = await getCurrentSubscription(userId);
-      
-      // Check if user has any data
-      const { data, error } = await supabase
-        .from('data_imports')
+      // Check if user has any customer or subscription data
+      const { data: customerData, error: customerError } = await supabase
+        .from('customers')
         .select('id')
         .eq('user_id', userId)
         .limit(1);
       
-      if (error) throw error;
+      if (customerError) throw customerError;
       
-      // Set has data based on subscription or imported data
-      setHasData(subscription.plan !== null || (data && data.length > 0));
+      // Check if user has connected Stripe
+      const { data: stripeData, error: stripeError } = await supabase
+        .from('stripe_connections')
+        .select('connected')
+        .eq('user_id', userId)
+        .eq('connected', true)
+        .limit(1);
+      
+      if (stripeError) throw stripeError;
+      
+      // Set has data based on customers or Stripe connection
+      setHasData((customerData && customerData.length > 0) || (stripeData && stripeData.length > 0));
     } catch (error) {
       console.error('Error checking user data:', error);
       setHasData(false);

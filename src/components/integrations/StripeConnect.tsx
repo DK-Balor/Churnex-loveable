@@ -6,7 +6,7 @@ import { Badge } from "../ui/badge";
 import { AlertCircle, Check, ExternalLink } from 'lucide-react';
 import { useToast } from "../ui/use-toast";
 import { useAuth } from '../../contexts/AuthContext';
-import { connectStripeAccount, getStripeConnectionStatus, disconnectStripeAccount } from '../../utils/integrations/stripe';
+import { connectStripeAccount, getStripeConnectionStatus, disconnectStripeAccount, syncStripeData } from '../../utils/integrations/stripe';
 
 interface StripeConnectProps {
   isDisabled?: boolean;
@@ -17,6 +17,7 @@ export function StripeConnect({ isDisabled = false }: StripeConnectProps) {
   const { user } = useAuth();
   const [isConnected, setIsConnected] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
   const [accountId, setAccountId] = useState<string | null>(null);
   const [lastSyncDate, setLastSyncDate] = useState<string | null>(null);
 
@@ -92,6 +93,32 @@ export function StripeConnect({ isDisabled = false }: StripeConnectProps) {
     }
   };
 
+  const handleSyncData = async () => {
+    if (!user) return;
+    
+    setIsSyncing(true);
+    try {
+      await syncStripeData(user.id);
+      
+      toast({
+        title: "Sync Started",
+        description: "Your Stripe data is being synchronized. This may take a few moments."
+      });
+      
+      // Refresh the connection status after a short delay
+      setTimeout(refreshConnectionStatus, 2000);
+    } catch (error) {
+      console.error("Error syncing Stripe data:", error);
+      toast({
+        variant: "destructive",
+        title: "Sync Error",
+        description: "Could not sync your Stripe data. Please try again."
+      });
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -133,8 +160,20 @@ export function StripeConnect({ isDisabled = false }: StripeConnectProps) {
       <CardFooter className="flex justify-between">
         {isConnected ? (
           <>
-            <Button variant="outline" onClick={refreshConnectionStatus} disabled={isDisabled}>
-              Refresh Data
+            <Button 
+              variant="outline" 
+              onClick={handleSyncData} 
+              disabled={isDisabled || isSyncing}
+            >
+              {isSyncing ? (
+                <>
+                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Syncing...
+                </>
+              ) : "Sync Data"}
             </Button>
             <Button variant="ghost" onClick={handleDisconnect} disabled={isDisabled}>
               Disconnect

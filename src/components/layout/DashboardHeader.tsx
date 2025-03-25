@@ -2,7 +2,7 @@
 import React from 'react';
 import { Menu } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { ProfileType } from '../../integrations/supabase/types';
+import { ProfileType } from '../../types/auth';
 
 interface DashboardHeaderProps {
   onOpenMobileMenu: () => void;
