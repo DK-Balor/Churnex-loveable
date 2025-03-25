@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -148,6 +149,21 @@ export const useCheckoutProcess = () => {
       console.log('[CHECKOUT] User email:', user.email);
       console.log('[CHECKOUT] Authentication token present:', !!supabase.auth.getSession());
       
+      // Log the Supabase auth headers for debugging
+      const getAuthHeaders = async () => {
+        const { data } = await supabase.auth.getSession();
+        if (data.session) {
+          console.log('[CHECKOUT] Auth session found, token length:', 
+            data.session.access_token ? data.session.access_token.length : 'no token');
+        } else {
+          console.error('[CHECKOUT] No auth session found!');
+        }
+      };
+      
+      await getAuthHeaders();
+      
+      console.log('[CHECKOUT] About to create checkout session...');
+      
       const { url } = await createCheckoutSession(selectedPlan);
       
       if (url) {
@@ -183,6 +199,13 @@ export const useCheckoutProcess = () => {
       // Extract more specific error messages from CheckoutError
       if (error instanceof CheckoutError) {
         errorMessage = error.message;
+        
+        // Provide more user-friendly messages for common errors
+        if (error.code === 'edge_function_error') {
+          errorMessage = 'There was a problem connecting to our payment service. Please try again later or contact support.';
+        } else if (error.code === 'no_checkout_url') {
+          errorMessage = 'Unable to create a checkout session. Please try again later.';
+        }
       }
       
       toast({

@@ -15,7 +15,21 @@ export const createCheckoutSession = async (
   const stripe = getStripeClient();
   
   try {
-    console.log("Creating checkout session...");
+    console.log("Creating checkout session with params:", {
+      customerId,
+      priceToUse,
+      userId,
+      businessName,
+      planName,
+      successUrl: successUrl.substring(0, 50) + "...", // Truncate for logging
+      cancelUrl: cancelUrl.substring(0, 50) + "...", // Truncate for logging
+      isTestMode
+    });
+    
+    // Validate inputs
+    if (!customerId || !priceToUse || !userId) {
+      throw new Error("Missing required parameters: customerId, priceToUse, or userId");
+    }
     
     // Create the session with a trial period
     const session = await stripe.checkout.sessions.create({
@@ -49,6 +63,14 @@ export const createCheckoutSession = async (
     return session;
   } catch (error) {
     console.error("Error creating checkout session:", error);
+    console.error("Error details:", {
+      message: error.message,
+      type: error.type,
+      code: error.code,
+      param: error.param,
+      statusCode: error.statusCode
+    });
+    
     throw new Error(`Error creating checkout session: ${error.message}`);
   }
 };

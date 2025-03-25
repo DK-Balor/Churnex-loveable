@@ -19,8 +19,8 @@ export default defineConfig(({ mode }) => ({
     host: "::",
     port: 8080,
     cors: true,
-    // Most permissive setting to avoid host blockage issues
-    allowedHosts: 'all',
+    // Fixed type error - using string[] instead of 'all' string
+    allowedHosts: ['all'],
   },
   build: {
     sourcemap: true,
