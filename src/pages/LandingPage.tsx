@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { BarChart3, AlertCircle, TrendingUp, Users, ArrowUp, Menu, X } from 'lucide-react';
