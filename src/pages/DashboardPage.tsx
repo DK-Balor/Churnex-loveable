@@ -1,21 +1,28 @@
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import DashboardOverview from '../components/dashboard/DashboardOverview';
 import WelcomeOnboarding from '../components/dashboard/WelcomeOnboarding';
 import { useAuth } from '../contexts/AuthContext';
 import { Button } from '../components/ui/button';
-import { Database } from 'lucide-react';
+import { Database, RefreshCw } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../integrations/supabase/client';
+import { calculateAnalytics, syncStripeData } from '../utils/integrations/stripe';
+import { useToast } from '../components/ui/use-toast';
 
 export default function DashboardPage() {
   const { profile, user } = useAuth();
-  const [hasData, setHasData] = React.useState<boolean | null>(null);
+  const { toast } = useToast();
+  const [hasData, setHasData] = useState<boolean | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [lastSyncTime, setLastSyncTime] = useState<string | null>(null);
   
-  React.useEffect(() => {
+  useEffect(() => {
     if (user) {
       // Check if the user has imported any data
       checkUserData(user.id);
+      // Get the last sync time
+      getLastSyncTime(user.id);
     }
   }, [user]);
   
@@ -48,15 +55,104 @@ export default function DashboardPage() {
     }
   };
   
+  const getLastSyncTime = async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('stripe_connections')
+        .select('last_sync_at')
+        .eq('user_id', userId)
+        .single();
+      
+      if (error) {
+        if (error.code !== 'PGRST116') {
+          throw error;
+        }
+        return;
+      }
+      
+      if (data?.last_sync_at) {
+        setLastSyncTime(data.last_sync_at);
+      }
+    } catch (error) {
+      console.error('Error getting last sync time:', error);
+    }
+  };
+  
+  const handleRefreshData = async () => {
+    if (!user || isRefreshing) return;
+    
+    setIsRefreshing(true);
+    try {
+      // Check if user has Stripe connected
+      const { data: stripeData, error: stripeError } = await supabase
+        .from('stripe_connections')
+        .select('connected, account_id')
+        .eq('user_id', user.id)
+        .eq('connected', true)
+        .single();
+      
+      if (stripeError && stripeError.code !== 'PGRST116') throw stripeError;
+      
+      if (stripeData?.connected) {
+        // Sync Stripe data
+        await syncStripeData(user.id);
+        toast({
+          title: "Data Refreshed",
+          description: "Your Stripe data has been synced and analytics updated.",
+        });
+      } else {
+        // Just calculate analytics from existing data
+        await calculateAnalytics(user.id);
+        toast({
+          title: "Analytics Refreshed",
+          description: "Dashboard analytics have been recalculated.",
+        });
+      }
+      
+      // Update last sync time
+      getLastSyncTime(user.id);
+    } catch (error) {
+      console.error('Error refreshing data:', error);
+      toast({
+        variant: "destructive",
+        title: "Refresh Failed",
+        description: "Could not refresh your data. Please try again.",
+      });
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+  
   return (
     <div>
-      <div className="mb-6">
-        <h1 className="text-2xl font-semibold text-gray-800 mb-2">
-          Dashboard
-        </h1>
-        <p className="text-gray-600">
-          Welcome back{profile?.full_name ? `, ${profile.full_name}` : ''}! Here's an overview of your subscription recovery performance.
-        </p>
+      <div className="mb-6 flex justify-between items-center">
+        <div>
+          <h1 className="text-2xl font-semibold text-gray-800 mb-2">
+            Dashboard
+          </h1>
+          <p className="text-gray-600">
+            Welcome back{profile?.full_name ? `, ${profile.full_name}` : ''}! Here's an overview of your subscription recovery performance.
+          </p>
+        </div>
+        
+        {hasData && (
+          <div className="flex items-center space-x-3">
+            {lastSyncTime && (
+              <span className="text-xs text-gray-500">
+                Last updated: {new Date(lastSyncTime).toLocaleString()}
+              </span>
+            )}
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={handleRefreshData}
+              disabled={isRefreshing}
+            >
+              <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
+              Refresh Data
+            </Button>
+          </div>
+        )}
       </div>
       
       {hasData === false && (
@@ -76,7 +172,7 @@ export default function DashboardPage() {
         </div>
       )}
       
-      <WelcomeOnboarding />
+      {hasData === true && <WelcomeOnboarding />}
       <DashboardOverview />
     </div>
   );

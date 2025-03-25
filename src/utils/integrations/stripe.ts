@@ -70,14 +70,34 @@ export const disconnectStripeAccount = async (userId: string, accountId: string)
 
 export const syncStripeData = async (userId: string) => {
   try {
+    // First sync the data from Stripe
     const { data, error } = await supabase.functions.invoke('stripe-sync-data', {
+      body: { userId }
+    });
+    
+    if (error) throw error;
+    
+    // After syncing data, calculate the analytics
+    await calculateAnalytics(userId);
+    
+    return data;
+  } catch (error) {
+    console.error('Error syncing Stripe data:', error);
+    throw error;
+  }
+};
+
+// New function to calculate analytics after data sync
+export const calculateAnalytics = async (userId: string) => {
+  try {
+    const { data, error } = await supabase.functions.invoke('calculate-analytics', {
       body: { userId }
     });
     
     if (error) throw error;
     return data;
   } catch (error) {
-    console.error('Error syncing Stripe data:', error);
+    console.error('Error calculating analytics:', error);
     throw error;
   }
 };
