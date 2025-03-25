@@ -1,6 +1,7 @@
 
 import { getStripeClient } from "../_shared/stripeClient.ts";
 import { updateUserMetadata, findUserByStripeCustomerId } from "./userMetadataService.ts";
+import { getSupabaseClient } from "../_shared/supabaseClient.ts";
 
 // Handle customer.subscription.updated event
 export const handleSubscriptionUpdated = async (subscription: any) => {
@@ -77,7 +78,7 @@ export const handleSubscriptionDeleted = async (subscription: any) => {
     // Get the user with this Stripe customer ID
     const { data, error } = await supabaseClient
       .from('user_metadata')
-      .select('id, subscription_plan')
+      .select('id, subscription_plan, account_type')
       .eq('stripe_customer_id', stripeCustomerId)
       .single();
     
@@ -88,19 +89,21 @@ export const handleSubscriptionDeleted = async (subscription: any) => {
     
     const userId = data.id;
     const previousPlan = data.subscription_plan;
+    const wasTrialing = data.account_type === 'trial';
     
-    console.log(`Processing subscription deletion for user ${userId} (previous plan: ${previousPlan})`);
+    console.log(`Processing subscription deletion for user ${userId} (previous plan: ${previousPlan}, was trialing: ${wasTrialing})`);
     
     // Mark subscription as canceled and revert to demo account
     // Set account expiry date to 30 days from now
     const accountExpiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
     
     await updateUserMetadata(userId, {
-      subscription_plan: 'free',
+      subscription_plan: null,
       subscription_status: 'canceled',
       previous_plan: previousPlan, // Store the previous plan for potential win-back campaigns
+      previous_account_type: data.account_type, // Store the previous account type
       trial_ends_at: null,
-      account_type: 'demo',
+      account_type: 'demo', // Always revert to demo account when subscription is canceled
       account_expires_at: accountExpiresAt,
       canceled_at: new Date().toISOString()
     });
@@ -148,3 +151,4 @@ export const handleTrialWillEnd = async (subscription: any) => {
     throw error;
   }
 };
+

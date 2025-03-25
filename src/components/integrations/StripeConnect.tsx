@@ -1,98 +1,89 @@
 
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "../ui/card";
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "../ui/card";
 import { Button } from "../ui/button";
-import { Badge } from "../ui/badge";
-import { AlertCircle, Check, ExternalLink } from 'lucide-react';
+import { CreditCard, XCircle, RefreshCw } from 'lucide-react';
 import { useToast } from "../ui/use-toast";
 import { useAuth } from '../../contexts/AuthContext';
-import { connectStripeAccount, getStripeConnectionStatus, disconnectStripeAccount, syncStripeData } from '../../utils/integrations/stripe';
+import { connectStripeAccount, disconnectStripeAccount, syncStripeData, getStripeConnectionStatus, updateOnboardingStepStatus } from '../../utils/integrations/stripe';
 
-interface StripeConnectProps {
+export interface StripeConnectProps {
   isDisabled?: boolean;
 }
 
 export function StripeConnect({ isDisabled = false }: StripeConnectProps) {
-  const { toast } = useToast();
   const { user } = useAuth();
+  const { toast } = useToast();
   const [isConnected, setIsConnected] = useState(false);
-  const [isConnecting, setIsConnecting] = useState(false);
-  const [isSyncing, setIsSyncing] = useState(false);
   const [accountId, setAccountId] = useState<string | null>(null);
-  const [lastSyncDate, setLastSyncDate] = useState<string | null>(null);
-
+  const [lastSyncTime, setLastSyncTime] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSyncing, setIsSyncing] = useState(false);
+  
   useEffect(() => {
     if (user) {
-      refreshConnectionStatus();
+      checkConnectionStatus(user.id);
     }
   }, [user]);
-
-  const refreshConnectionStatus = async () => {
-    if (!user) return;
-    
+  
+  const checkConnectionStatus = async (userId: string) => {
     try {
-      const status = await getStripeConnectionStatus(user.id);
-      setIsConnected(!!status?.connected);
-      setAccountId(status?.account_id || null);
-      setLastSyncDate(status?.last_sync_at || null);
+      const status = await getStripeConnectionStatus(userId);
+      setIsConnected(status.connected);
+      setAccountId(status.account_id);
+      setLastSyncTime(status.last_sync_at);
+      setIsLoading(false);
     } catch (error) {
-      console.error("Error checking Stripe connection:", error);
+      console.error('Error checking Stripe connection:', error);
+      setIsLoading(false);
     }
   };
-
-  const handleConnect = async () => {
+  
+  const handleConnectStripe = async () => {
     if (!user) return;
     
-    setIsConnecting(true);
+    setIsLoading(true);
     try {
-      const result = await connectStripeAccount(user.id);
-      
-      if (result.url) {
-        // Redirect to Stripe OAuth flow
-        window.location.href = result.url;
-      } else {
-        toast({
-          variant: "destructive",
-          title: "Connection Failed",
-          description: "Unable to start Stripe connection process."
-        });
-      }
+      await connectStripeAccount(user.id);
     } catch (error) {
-      console.error("Error connecting to Stripe:", error);
+      console.error('Error connecting Stripe:', error);
       toast({
+        title: "Connection Failed",
+        description: "Could not connect to Stripe. Please try again.",
         variant: "destructive",
-        title: "Connection Error",
-        description: "Could not connect to Stripe. Please try again."
       });
-    } finally {
-      setIsConnecting(false);
+      setIsLoading(false);
     }
   };
-
-  const handleDisconnect = async () => {
+  
+  const handleDisconnectStripe = async () => {
     if (!user || !accountId) return;
     
-    if (confirm("Are you sure you want to disconnect your Stripe account? This will stop all data synchronization.")) {
-      try {
-        await disconnectStripeAccount(user.id, accountId);
-        toast({
-          title: "Stripe Disconnected",
-          description: "Your Stripe account has been disconnected successfully."
-        });
-        setIsConnected(false);
-        setAccountId(null);
-        setLastSyncDate(null);
-      } catch (error) {
-        console.error("Error disconnecting Stripe:", error);
-        toast({
-          variant: "destructive",
-          title: "Disconnect Error",
-          description: "Could not disconnect your Stripe account. Please try again."
-        });
-      }
+    setIsLoading(true);
+    try {
+      await disconnectStripeAccount(user.id, accountId);
+      
+      // After successful disconnect, update the connection status
+      setIsConnected(false);
+      setAccountId(null);
+      setLastSyncTime(null);
+      
+      toast({
+        title: "Stripe Disconnected",
+        description: "Your Stripe account has been disconnected.",
+      });
+    } catch (error) {
+      console.error('Error disconnecting Stripe:', error);
+      toast({
+        title: "Disconnect Failed",
+        description: "Could not disconnect your Stripe account. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
     }
   };
-
+  
   const handleSyncData = async () => {
     if (!user) return;
     
@@ -100,95 +91,95 @@ export function StripeConnect({ isDisabled = false }: StripeConnectProps) {
     try {
       await syncStripeData(user.id);
       
+      // Mark the connect_data step as completed after successful sync
+      await updateOnboardingStepStatus(user.id, 'connect_data', true);
+      
+      // Update the last sync time display
+      const status = await getStripeConnectionStatus(user.id);
+      setLastSyncTime(status.last_sync_at);
+      
       toast({
-        title: "Sync Started",
-        description: "Your Stripe data is being synchronized. This may take a few moments."
+        title: "Data Synced",
+        description: "Your Stripe data has been successfully synced.",
       });
       
-      // Refresh the connection status after a short delay
-      setTimeout(refreshConnectionStatus, 2000);
+      // Navigate back to dashboard after successful connection and sync
+      window.location.href = '/dashboard';
     } catch (error) {
-      console.error("Error syncing Stripe data:", error);
+      console.error('Error syncing Stripe data:', error);
       toast({
+        title: "Sync Failed",
+        description: "Could not sync your Stripe data. Please try again.",
         variant: "destructive",
-        title: "Sync Error",
-        description: "Could not sync your Stripe data. Please try again."
       });
     } finally {
       setIsSyncing(false);
     }
   };
-
+  
   return (
-    <Card>
+    <Card className={isDisabled ? "opacity-50" : ""}>
       <CardHeader>
-        <div className="flex justify-between items-start">
-          <div>
-            <CardTitle>Stripe</CardTitle>
-            <CardDescription>
-              Connect your Stripe account to automatically import subscription data.
-            </CardDescription>
-          </div>
-          {isConnected && (
-            <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-              <Check className="h-3 w-3 mr-1" /> Connected
-            </Badge>
-          )}
-        </div>
+        <CardTitle>Stripe</CardTitle>
+        <CardDescription>
+          Connect your Stripe account to automatically import subscription data
+        </CardDescription>
       </CardHeader>
       <CardContent>
-        {isConnected ? (
-          <div className="space-y-2">
-            <p className="text-sm text-gray-500">
-              Connected to Stripe account: <span className="font-mono">{accountId}</span>
-            </p>
-            {lastSyncDate && (
-              <p className="text-sm text-gray-500">
-                Last synchronized: {new Date(lastSyncDate).toLocaleString()}
-              </p>
-            )}
+        {isLoading ? (
+          <div className="flex justify-center py-4">
+            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-800"></div>
           </div>
-        ) : (
-          <div className="text-sm text-gray-500 flex items-start space-x-2">
-            <AlertCircle className="h-4 w-4 text-amber-500 mt-0.5" />
-            <p>
-              Not connected. Connect your Stripe account to automatically import and analyze your subscription data.
-            </p>
+        ) : isConnected ? (
+          <div>
+            <div className="flex items-center mb-4 bg-green-50 p-3 rounded-md">
+              <div className="bg-green-100 p-2 rounded-full mr-3">
+                <CreditCard className="h-5 w-5 text-green-600" />
+              </div>
+              <div>
+                <p className="font-medium text-green-800">Stripe Connected</p>
+                <p className="text-sm text-green-700">Account: {accountId}</p>
+                {lastSyncTime && (
+                  <p className="text-xs text-green-600 mt-1">
+                    Last synced: {new Date(lastSyncTime).toLocaleString()}
+                  </p>
+                )}
+              </div>
+            </div>
+            
+            <div className="flex space-x-2">
+              <Button 
+                onClick={handleSyncData} 
+                variant="outline" 
+                className="flex-1"
+                disabled={isSyncing || isDisabled}
+              >
+                <RefreshCw className={`h-4 w-4 mr-2 ${isSyncing ? 'animate-spin' : ''}`} />
+                {isSyncing ? 'Syncing...' : 'Sync Data'}
+              </Button>
+              
+              <Button 
+                onClick={handleDisconnectStripe} 
+                variant="outline" 
+                className="flex-1 border-red-300 text-red-600 hover:bg-red-50"
+                disabled={isDisabled}
+              >
+                <XCircle className="h-4 w-4 mr-2" />
+                Disconnect
+              </Button>
+            </div>
           </div>
-        )}
-      </CardContent>
-      <CardFooter className="flex justify-between">
-        {isConnected ? (
-          <>
-            <Button 
-              variant="outline" 
-              onClick={handleSyncData} 
-              disabled={isDisabled || isSyncing}
-            >
-              {isSyncing ? (
-                <>
-                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                  Syncing...
-                </>
-              ) : "Sync Data"}
-            </Button>
-            <Button variant="ghost" onClick={handleDisconnect} disabled={isDisabled}>
-              Disconnect
-            </Button>
-          </>
         ) : (
           <Button 
+            onClick={handleConnectStripe} 
             className="w-full" 
-            onClick={handleConnect} 
-            disabled={isDisabled || isConnecting}
+            disabled={isDisabled}
           >
-            {isConnecting ? "Connecting..." : "Connect Stripe"}
+            <CreditCard className="h-4 w-4 mr-2" />
+            Connect Stripe
           </Button>
         )}
-      </CardFooter>
+      </CardContent>
     </Card>
   );
 }

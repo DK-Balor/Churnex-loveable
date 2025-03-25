@@ -7,7 +7,7 @@ import { Button } from '../components/ui/button';
 import { Database, RefreshCw } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../integrations/supabase/client';
-import { calculateAnalytics, syncStripeData } from '../utils/integrations/stripe';
+import { calculateAnalytics, syncStripeData, getStripeConnectionStatus, updateOnboardingStepStatus } from '../utils/integrations/stripe';
 import { useToast } from '../components/ui/use-toast';
 
 export default function DashboardPage() {
@@ -23,6 +23,8 @@ export default function DashboardPage() {
       checkUserData(user.id);
       // Get the last sync time
       getLastSyncTime(user.id);
+      // Check if they came back from Stripe connection
+      checkStripeRedirect();
     }
   }, [user]);
   
@@ -38,17 +40,15 @@ export default function DashboardPage() {
       if (customerError) throw customerError;
       
       // Check if user has connected Stripe
-      const { data: stripeData, error: stripeError } = await supabase
-        .from('stripe_connections')
-        .select('connected')
-        .eq('user_id', userId)
-        .eq('connected', true)
-        .limit(1);
-      
-      if (stripeError) throw stripeError;
+      const stripeStatus = await getStripeConnectionStatus(userId);
       
       // Set has data based on customers or Stripe connection
-      setHasData((customerData && customerData.length > 0) || (stripeData && stripeData.length > 0));
+      setHasData((customerData && customerData.length > 0) || stripeStatus.connected);
+      
+      // If Stripe is connected, mark the connect_data step as completed
+      if (stripeStatus.connected) {
+        await updateOnboardingStepStatus(userId, 'connect_data', true);
+      }
     } catch (error) {
       console.error('Error checking user data:', error);
       setHasData(false);
@@ -78,22 +78,59 @@ export default function DashboardPage() {
     }
   };
   
+  // Check if the user is returning from Stripe OAuth
+  const checkStripeRedirect = async () => {
+    const url = new URL(window.location.href);
+    const stripeSuccess = url.searchParams.get('stripe_success');
+    
+    if (stripeSuccess === 'true' && user) {
+      // Clear the URL parameter to prevent re-processing
+      window.history.replaceState({}, document.title, window.location.pathname);
+      
+      toast({
+        title: "Stripe Connected",
+        description: "Your Stripe account was successfully connected. Syncing data...",
+      });
+      
+      // Sync the data from Stripe
+      setIsRefreshing(true);
+      try {
+        await syncStripeData(user.id);
+        
+        // Mark the connect_data step as completed
+        await updateOnboardingStepStatus(user.id, 'connect_data', true);
+        
+        toast({
+          title: "Data Synced",
+          description: "Your Stripe data has been successfully imported.",
+          variant: "success",
+        });
+        
+        // Refresh data status and last sync time
+        checkUserData(user.id);
+        getLastSyncTime(user.id);
+      } catch (error) {
+        console.error('Error syncing Stripe data:', error);
+        toast({
+          title: "Sync Failed",
+          description: "There was a problem syncing your Stripe data. Please try again.",
+          variant: "destructive",
+        });
+      } finally {
+        setIsRefreshing(false);
+      }
+    }
+  };
+  
   const handleRefreshData = async () => {
     if (!user || isRefreshing) return;
     
     setIsRefreshing(true);
     try {
       // Check if user has Stripe connected
-      const { data: stripeData, error: stripeError } = await supabase
-        .from('stripe_connections')
-        .select('connected, account_id')
-        .eq('user_id', user.id)
-        .eq('connected', true)
-        .single();
+      const stripeStatus = await getStripeConnectionStatus(user.id);
       
-      if (stripeError && stripeError.code !== 'PGRST116') throw stripeError;
-      
-      if (stripeData?.connected) {
+      if (stripeStatus.connected) {
         // Sync Stripe data
         await syncStripeData(user.id);
         toast({
@@ -172,7 +209,7 @@ export default function DashboardPage() {
         </div>
       )}
       
-      {hasData === true && <WelcomeOnboarding />}
+      <WelcomeOnboarding />
       <DashboardOverview />
     </div>
   );

@@ -45,7 +45,11 @@ serve(async (req) => {
       response_type: 'code',
       scope: 'read_write',
       state: userId,
-      redirect_uri: `${appUrl}/stripe-callback`
+      redirect_uri: `${appUrl}/stripe-callback`,
+      stripe_user: {
+        // Pre-fill user's email if available
+        email: await getUserEmail(supabase, userId),
+      },
     });
 
     return new Response(
@@ -61,3 +65,25 @@ serve(async (req) => {
     );
   }
 });
+
+// Helper function to get user's email for pre-filling in Stripe
+async function getUserEmail(supabase: any, userId: string): Promise<string | undefined> {
+  try {
+    // Get user from auth.users table
+    const { data, error } = await supabase
+      .from('auth.users')
+      .select('email')
+      .eq('id', userId)
+      .single();
+    
+    if (error || !data) {
+      console.log('Error getting user email:', error);
+      return undefined;
+    }
+    
+    return data.email;
+  } catch (error) {
+    console.error('Error in getUserEmail:', error);
+    return undefined;
+  }
+}

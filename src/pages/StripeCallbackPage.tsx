@@ -1,118 +1,125 @@
 
 import React, { useEffect, useState } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
-import { Loader2 } from 'lucide-react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { supabase } from '../integrations/supabase/client';
+import { useToast } from '../components/ui/use-toast';
+import { updateOnboardingStepStatus } from '../utils/integrations/stripe';
 
 export default function StripeCallbackPage() {
+  const [searchParams] = useSearchParams();
   const { user } = useAuth();
   const navigate = useNavigate();
-  const location = useLocation();
-  const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
-  const [message, setMessage] = useState('Processing your Stripe connection...');
+  const { toast } = useToast();
+  const [isProcessing, setIsProcessing] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!user) {
-      // If not authenticated, redirect to login
-      navigate('/auth', { replace: true });
-      return;
-    }
-
-    const handleStripeCallback = async () => {
+    const processCallback = async () => {
       try {
-        // Parse query params
-        const searchParams = new URLSearchParams(location.search);
+        // Get the required parameters from the URL
         const code = searchParams.get('code');
-        const state = searchParams.get('state');
+        const state = searchParams.get('userId') || searchParams.get('state'); // Get user ID from either param
         const error = searchParams.get('error');
         
         if (error) {
-          setStatus('error');
-          setMessage(`Connection failed: ${error}`);
-          setTimeout(() => navigate('/integrations', { replace: true }), 3000);
+          console.error('Error from Stripe:', error);
+          setError(`Stripe returned an error: ${error}`);
           return;
         }
         
         if (!code || !state) {
-          setStatus('error');
-          setMessage('Invalid callback parameters');
-          setTimeout(() => navigate('/integrations', { replace: true }), 3000);
+          console.error('Missing required parameters');
+          setError('Missing required parameters from Stripe');
           return;
         }
         
-        // Verify that the state matches the user ID
-        if (state !== user.id) {
-          setStatus('error');
-          setMessage('Invalid session state');
-          setTimeout(() => navigate('/integrations', { replace: true }), 3000);
+        // The state param contains the user ID we sent when creating the OAuth link
+        const userId = state;
+        
+        if (!userId) {
+          console.error('Invalid state parameter, no user ID');
+          setError('Authentication error. Please try again.');
           return;
         }
         
-        // Call Supabase Edge Function to handle the OAuth exchange
-        const { data, error: callError } = await supabase.functions.invoke('stripe-oauth-callback', {
-          body: { code, userId: user.id }
+        // Call the Supabase edge function to exchange the code for access token
+        const { data, error: fnError } = await supabase.functions.invoke('stripe-oauth-callback', {
+          body: { code, userId }
         });
         
-        if (callError) throw callError;
-        
-        if (data?.success) {
-          setStatus('success');
-          setMessage('Successfully connected to Stripe!');
-          setTimeout(() => navigate('/integrations', { replace: true }), 2000);
-        } else {
-          throw new Error(data?.message || 'Failed to connect to Stripe');
+        if (fnError) {
+          console.error('Error calling edge function:', fnError);
+          throw fnError;
         }
+        
+        if (!data.success) {
+          throw new Error(data.error || 'Failed to connect Stripe account');
+        }
+        
+        // Mark the connect_data step as completed
+        if (user) {
+          await updateOnboardingStepStatus(user.id, 'connect_data', true);
+        }
+        
+        // Redirect to dashboard with success param
+        navigate('/dashboard?stripe_success=true');
+        
+        toast({
+          title: "Stripe Connected",
+          description: "Your Stripe account has been successfully connected!",
+          variant: "success",
+        });
       } catch (error) {
-        console.error('Error handling Stripe callback:', error);
-        setStatus('error');
-        setMessage(error instanceof Error ? error.message : 'Unknown error occurred');
-        setTimeout(() => navigate('/integrations', { replace: true }), 3000);
+        console.error('Error in Stripe callback:', error);
+        setError('Error connecting your Stripe account. Please try again.');
+        toast({
+          title: "Connection Failed",
+          description: "There was a problem connecting your Stripe account.",
+          variant: "destructive",
+        });
+      } finally {
+        setIsProcessing(false);
       }
     };
 
-    handleStripeCallback();
-  }, [user, location, navigate]);
+    processCallback();
+  }, [searchParams, user, navigate, toast]);
 
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <div className="max-w-md w-full mx-auto p-8 bg-white rounded-xl shadow-md text-center">
-        {status === 'loading' && (
-          <Loader2 className="h-12 w-12 mx-auto mb-4 text-blue-500 animate-spin" />
-        )}
-        
-        {status === 'success' && (
-          <div className="h-12 w-12 mx-auto mb-4 rounded-full bg-green-100 flex items-center justify-center">
-            <svg className="h-6 w-6 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-            </svg>
-          </div>
-        )}
-        
-        {status === 'error' && (
-          <div className="h-12 w-12 mx-auto mb-4 rounded-full bg-red-100 flex items-center justify-center">
-            <svg className="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </div>
-        )}
-        
-        <h2 className={`text-xl font-medium mb-2 ${
-          status === 'error' ? 'text-red-700' : 
-          status === 'success' ? 'text-green-700' : 'text-gray-800'
-        }`}>
-          {status === 'loading' ? 'Connecting to Stripe' : 
-           status === 'success' ? 'Connection Successful' : 'Connection Failed'}
-        </h2>
-        
-        <p className="text-gray-600">{message}</p>
-        
-        {status !== 'loading' && (
-          <p className="text-sm text-gray-500 mt-4">
-            Redirecting you back to integrations...
-          </p>
-        )}
+  if (isProcessing) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin h-16 w-16 border-b-2 border-brand-green border-t-transparent rounded-full mx-auto mb-6"></div>
+          <h1 className="text-2xl font-bold text-brand-dark-900 mb-2">Connecting Your Stripe Account</h1>
+          <p className="text-brand-dark-600">Please wait while we set up your integration...</p>
+        </div>
       </div>
-    </div>
-  );
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4">
+        <div className="bg-white rounded-lg shadow-lg p-8 max-w-md w-full">
+          <div className="text-center">
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-red-100 text-red-500 mb-4">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </div>
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">Connection Error</h2>
+            <p className="text-gray-600 mb-6">{error}</p>
+            <button
+              onClick={() => navigate('/integrations')}
+              className="inline-block px-5 py-3 bg-brand-green text-white rounded-md font-medium hover:bg-brand-green-600 transition-colors"
+            >
+              Try Again
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return null; // This should never render as we always redirect on success
 }
