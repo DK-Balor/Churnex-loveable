@@ -117,43 +117,43 @@ export default function MetricsGrid({ isReadOnly }: MetricsGridProps) {
       value: isLoading ? '...' : metricsData.activeSubscribers.toString(),
       change: '+12%', // This would be calculated from historical data
       positive: true,
-      icon: <Users className="h-6 w-6 text-blue-600" />
+      icon: <Users className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600" />
     },
     {
       title: 'MRR Recovered',
       value: isLoading ? '...' : formatCurrency(metricsData.mrrRecovered),
       change: '+8.3%', // This would be calculated from historical data
       positive: true,
-      icon: <CreditCard className="h-6 w-6 text-green-600" />
+      icon: <CreditCard className="h-5 w-5 sm:h-6 sm:w-6 text-green-600" />
     },
     {
       title: 'Recovery Rate',
       value: isLoading ? '...' : `${metricsData.recoveryRate}%`,
       change: '+3%', // This would be calculated from historical data
       positive: true,
-      icon: <BarChart3 className="h-6 w-6 text-purple-600" />
+      icon: <BarChart3 className="h-5 w-5 sm:h-6 sm:w-6 text-purple-600" />
     },
     {
       title: 'At-Risk MRR',
       value: isLoading ? '...' : formatCurrency(metricsData.atRiskMrr),
       change: '-5%', // This would be calculated from historical data
       positive: true, // Usually negative but positive means improving (decreasing)
-      icon: <AlertTriangle className="h-6 w-6 text-amber-600" />
+      icon: <AlertTriangle className="h-5 w-5 sm:h-6 sm:w-6 text-amber-600" />
     }
   ];
 
   return (
-    <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 ${isReadOnly ? 'opacity-75 pointer-events-none' : ''}`}>
+    <div className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6 ${isReadOnly ? 'opacity-75 pointer-events-none' : ''}`}>
       {metrics.map((metric, index) => (
-        <div key={index} className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
-          <div className="flex justify-between items-start mb-4">
-            <span className="p-2 rounded-lg bg-gray-50">{metric.icon}</span>
-            <span className={`text-sm font-medium ${metric.positive ? 'text-green-600' : 'text-red-600'}`}>
+        <div key={index} className="bg-white p-4 sm:p-6 rounded-lg shadow-sm border border-gray-100">
+          <div className="flex justify-between items-start mb-3 sm:mb-4">
+            <span className="p-1.5 sm:p-2 rounded-lg bg-gray-50">{metric.icon}</span>
+            <span className={`text-xs sm:text-sm font-medium ${metric.positive ? 'text-green-600' : 'text-red-600'}`}>
               {metric.change}
             </span>
           </div>
-          <h3 className="text-gray-500 text-sm font-medium">{metric.title}</h3>
-          <p className="text-2xl font-bold mt-1">{metric.value}</p>
+          <h3 className="text-gray-500 text-xs sm:text-sm font-medium">{metric.title}</h3>
+          <p className="text-lg sm:text-2xl font-bold mt-1">{metric.value}</p>
         </div>
       ))}
     </div>

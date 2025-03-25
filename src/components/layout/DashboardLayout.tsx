@@ -49,8 +49,8 @@ export default function DashboardLayout() {
   if (isLoading || isPageLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-green mx-auto"></div>
+        <div className="text-center px-4">
+          <div className="animate-spin rounded-full h-10 w-10 sm:h-12 sm:w-12 border-b-2 border-brand-green mx-auto"></div>
           <p className="mt-4 text-gray-600">Loading dashboard...</p>
         </div>
       </div>
@@ -85,8 +85,8 @@ export default function DashboardLayout() {
           profile={profile}
         />
 
-        <main className="flex-1 pb-8">
-          <div className="mt-8 px-4 sm:px-6 lg:px-8">
+        <main className="flex-1 pb-6 sm:pb-8">
+          <div className="mt-4 sm:mt-8 px-3 sm:px-4 md:px-6 lg:px-8">
             <Outlet />
           </div>
         </main>
