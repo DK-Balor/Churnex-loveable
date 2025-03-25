@@ -41,7 +41,7 @@ const StatusMessage: React.FC<StatusMessageProps> = ({ message }) => {
           {message.text}
         </p>
         
-        {message.type === 'error' && (
+        {message.type === 'error' && !message.text.includes('contact support') && (
           <div className="mt-4 text-sm text-red-600">
             <p>Please try again or contact our support team if the issue persists.</p>
           </div>

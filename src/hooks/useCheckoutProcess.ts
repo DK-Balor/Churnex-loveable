@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -147,7 +146,6 @@ export const useCheckoutProcess = () => {
       console.log('[CHECKOUT] Creating checkout session for plan:', selectedPlan);
       console.log('[CHECKOUT] User ID:', user.id);
       console.log('[CHECKOUT] User email:', user.email);
-      console.log('[CHECKOUT] Authentication token present:', !!supabase.auth.getSession());
       
       // Log the Supabase auth headers for debugging
       const getAuthHeaders = async () => {
@@ -177,34 +175,18 @@ export const useCheckoutProcess = () => {
     } catch (error) {
       console.error('[CHECKOUT] Error creating checkout session:', error);
       
-      // Log detailed error information
-      if (error instanceof CheckoutError) {
-        console.error('[CHECKOUT] CheckoutError details:', {
-          message: error.message,
-          code: error.code,
-          stack: error.stack
-        });
-      } else if (error instanceof Error) {
-        console.error('[CHECKOUT] Error details:', {
-          name: error.name,
-          message: error.message,
-          stack: error.stack
-        });
-      } else {
-        console.error('[CHECKOUT] Unknown error type:', error);
-      }
-      
-      let errorMessage = 'Failed to create checkout session. Please try again.';
+      let errorMessage = 'Unable to connect to the payment service. Please try again later.';
       
       // Extract more specific error messages from CheckoutError
       if (error instanceof CheckoutError) {
-        errorMessage = error.message;
-        
-        // Provide more user-friendly messages for common errors
         if (error.code === 'edge_function_error') {
-          errorMessage = 'There was a problem connecting to our payment service. Please try again later or contact support.';
+          errorMessage = 'Unable to connect to the payment service. Please try again later.';
         } else if (error.code === 'no_checkout_url') {
           errorMessage = 'Unable to create a checkout session. Please try again later.';
+        } else if (error.code === 'invalid_price_id') {
+          errorMessage = 'Invalid subscription plan selected. Please try a different plan.';
+        } else {
+          errorMessage = error.message;
         }
       }
       

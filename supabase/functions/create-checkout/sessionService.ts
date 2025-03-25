@@ -71,6 +71,6 @@ export const createCheckoutSession = async (
       statusCode: error.statusCode
     });
     
-    throw new Error(`Error creating checkout session: ${error.message}`);
+    throw error; // Return the original error for proper handling
   }
 };

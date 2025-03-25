@@ -63,25 +63,11 @@ const invokeEdgeFunction = async <T>(functionName: string, payload: any): Promis
   
   try {
     console.log(`Calling supabase.functions.invoke('${functionName}')`);
-    const response = await supabase.functions.invoke(functionName, {
+    const { data, error } = await supabase.functions.invoke(functionName, {
       body: payload
     });
     
-    console.log(`[${new Date().toISOString()}] ${functionName} raw response:`, response);
-    const { data, error, status } = response;
-    
-    console.log(`${functionName} response status:`, status);
-    console.log(`${functionName} response data:`, data);
-    console.log(`${functionName} response error:`, error);
-    
-    // Check for non-2xx response status
-    if (status < 200 || status >= 300) {
-      console.error(`${functionName} returned non-2xx status:`, status);
-      throw new CheckoutError(
-        `Error invoking ${functionName}: Server returned ${status} status`, 
-        'edge_function_status_error'
-      );
-    }
+    console.log(`[${new Date().toISOString()}] ${functionName} response:`, { data, error });
     
     if (error) {
       console.error(`${functionName} function error:`, error);

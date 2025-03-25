@@ -84,7 +84,7 @@ serve(async (req) => {
         .from("user_metadata")
         .select("business_name, full_name")
         .eq("id", user.id)
-        .maybeSingle(); // Changed from .single() to .maybeSingle() to prevent errors
+        .maybeSingle();
 
       if (metadataError) {
         console.error("Error fetching user metadata:", metadataError);
@@ -154,12 +154,9 @@ serve(async (req) => {
         );
       } catch (error) {
         console.error("Error during checkout process:", error);
-        return createErrorResponse(
-          "Error creating checkout session", 
-          error.message, 
-          500, 
-          error.code
-        );
+        const errorMessage = error.message || "Error creating checkout session";
+        const errorCode = error.code || "stripe_error";
+        return createErrorResponse(errorMessage, error.message, 400, errorCode);
       }
     } catch (error) {
       console.error("Error during user authentication:", error);
