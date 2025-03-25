@@ -27,7 +27,7 @@ serve(async (req) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
     const stripeSecretKey = Deno.env.get("STRIPE_SECRET_KEY") || "";
-    const appUrl = Deno.env.get("APP_URL") || "https://churnex.lovable.app";
+    const appUrl = Deno.env.get("APP_URL") || "https://app.churnex.com";
     
     if (!supabaseUrl || !supabaseServiceKey || !stripeSecretKey) {
       return new Response(
@@ -39,16 +39,26 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
     const stripe = new Stripe(stripeSecretKey);
     
+    // Get user email for pre-filling Stripe form
+    const userEmail = await getUserEmail(supabase, userId);
+    
+    // Get user's business name for Stripe form
+    const businessName = await getBusinessName(supabase, userId);
+    
     // Create Stripe OAuth link
     const stripeConnectUrl = await stripe.oauth.authorizeUrl({
-      client_id: 'ca_XXXXXXXXXXXXXXXXXXXXXXXX', // Replace with your Stripe Connect client ID
+      client_id: 'ca_XXXXXXXXXXXXXXXXXXXXXXXX', // Replace with your actual Stripe Connect client ID
       response_type: 'code',
       scope: 'read_write',
-      state: userId,
+      state: userId, // Pass user ID in state param to retrieve it on callback
       redirect_uri: `${appUrl}/stripe-callback`,
       stripe_user: {
-        // Pre-fill user's email if available
-        email: await getUserEmail(supabase, userId),
+        email: userEmail,
+        business_name: businessName,
+        country: 'GB', // Default to UK
+        // Pre-fill as much information as possible for a smoother user experience
+        business_type: 'company',
+        product_description: 'Subscription business',
       },
     });
 
@@ -69,21 +79,39 @@ serve(async (req) => {
 // Helper function to get user's email for pre-filling in Stripe
 async function getUserEmail(supabase: any, userId: string): Promise<string | undefined> {
   try {
-    // Get user from auth.users table
+    // Get user's email from auth.users table
+    const { data: userData, error: userError } = await supabase.auth.admin.getUserById(userId);
+    
+    if (userError || !userData) {
+      console.log('Error getting user email:', userError);
+      return undefined;
+    }
+    
+    return userData.user.email;
+  } catch (error) {
+    console.error('Error in getUserEmail:', error);
+    return undefined;
+  }
+}
+
+// Helper function to get user's business name
+async function getBusinessName(supabase: any, userId: string): Promise<string | undefined> {
+  try {
+    // Get business name from user_metadata table
     const { data, error } = await supabase
-      .from('auth.users')
-      .select('email')
+      .from('user_metadata')
+      .select('business_name')
       .eq('id', userId)
       .single();
     
     if (error || !data) {
-      console.log('Error getting user email:', error);
+      console.log('Error getting business name:', error);
       return undefined;
     }
     
-    return data.email;
+    return data.business_name;
   } catch (error) {
-    console.error('Error in getUserEmail:', error);
+    console.error('Error in getBusinessName:', error);
     return undefined;
   }
 }

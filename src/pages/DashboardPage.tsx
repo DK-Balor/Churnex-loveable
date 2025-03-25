@@ -5,14 +5,16 @@ import WelcomeOnboarding from '../components/dashboard/WelcomeOnboarding';
 import { useAuth } from '../contexts/AuthContext';
 import { Button } from '../components/ui/button';
 import { Database, RefreshCw } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams, useLocation } from 'react-router-dom';
 import { supabase } from '../integrations/supabase/client';
-import { calculateAnalytics, syncStripeData, getStripeConnectionStatus, updateOnboardingStepStatus } from '../utils/integrations/stripe';
+import { calculateAnalytics, syncStripeData, getStripeConnectionStatus, updateOnboardingStepStatus, getOnboardingStepStatuses } from '../utils/integrations/stripe';
 import { useToast } from '../components/ui/use-toast';
 
 export default function DashboardPage() {
   const { profile, user } = useAuth();
   const { toast } = useToast();
+  const [searchParams] = useSearchParams();
+  const location = useLocation();
   const [hasData, setHasData] = useState<boolean | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [lastSyncTime, setLastSyncTime] = useState<string | null>(null);
@@ -25,8 +27,10 @@ export default function DashboardPage() {
       getLastSyncTime(user.id);
       // Check if they came back from Stripe connection
       checkStripeRedirect();
+      // Check for step completions from other pages
+      checkStepCompletion();
     }
-  }, [user]);
+  }, [user, location]);
   
   const checkUserData = async (userId: string) => {
     try {
@@ -80,8 +84,8 @@ export default function DashboardPage() {
   
   // Check if the user is returning from Stripe OAuth
   const checkStripeRedirect = async () => {
-    const url = new URL(window.location.href);
-    const stripeSuccess = url.searchParams.get('stripe_success');
+    const stripeSuccess = searchParams.get('stripe_success');
+    const stripeError = searchParams.get('stripe_error');
     
     if (stripeSuccess === 'true' && user) {
       // Clear the URL parameter to prevent re-processing
@@ -118,6 +122,56 @@ export default function DashboardPage() {
         });
       } finally {
         setIsRefreshing(false);
+      }
+    }
+    
+    if (stripeError === 'true') {
+      // Clear the URL parameter to prevent re-processing
+      window.history.replaceState({}, document.title, window.location.pathname);
+      
+      toast({
+        title: "Stripe Connection Failed",
+        description: "Please try again or contact support if the problem persists.",
+        variant: "destructive",
+      });
+    }
+  };
+  
+  // Check if returning from other pages after completing steps
+  const checkStepCompletion = async () => {
+    if (!user) return;
+    
+    // Get referrer path from URL state if available
+    const fromPath = location.state?.from;
+    
+    if (fromPath) {
+      // Clear the state to prevent re-processing
+      window.history.replaceState({}, document.title, window.location.pathname);
+      
+      // Map paths to step IDs
+      const pathToStepId: {[key: string]: string} = {
+        '/settings': 'profile',
+        '/churn-prediction': 'explore_predictions',
+        '/recovery': 'create_campaign'
+      };
+      
+      const stepId = pathToStepId[fromPath];
+      if (stepId) {
+        // Mark the step as completed
+        await updateOnboardingStepStatus(user.id, stepId, true);
+        
+        // Show success toast
+        const stepNames: {[key: string]: string} = {
+          'profile': 'Profile updated',
+          'explore_predictions': 'Predictions explored',
+          'create_campaign': 'Campaign created'
+        };
+        
+        toast({
+          title: stepNames[stepId] || 'Step completed',
+          description: "You've completed another step in your onboarding!",
+          variant: "success",
+        });
       }
     }
   };

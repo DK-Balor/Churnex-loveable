@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../components/ui/use-toast';
 import { getOnboardingStepStatuses, updateOnboardingStepStatus, connectStripeAccount } from '../../utils/integrations/stripe';
+import CompletedOnboardingPrompt from './CompletedOnboardingPrompt';
 
 interface OnboardingStep {
   id: string;
@@ -22,6 +23,7 @@ export default function WelcomeOnboarding() {
   const [steps, setSteps] = useState<OnboardingStep[]>([]);
   const [dismissed, setDismissed] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [allStepsCompleted, setAllStepsCompleted] = useState(false);
   
   // Initialize steps with handlers and load completion status
   useEffect(() => {
@@ -54,7 +56,7 @@ export default function WelcomeOnboarding() {
           title: 'Explore churn predictions',
           description: 'See which customers are at risk of churning and why.',
           action: 'View Predictions',
-          handler: () => navigate('/churn-prediction'),
+          handler: () => handleExplorePredictions(),
           completed: !!stepStatuses.explore_predictions
         },
         {
@@ -62,32 +64,56 @@ export default function WelcomeOnboarding() {
           title: 'Create your first win-back campaign',
           description: 'Generate AI-powered campaigns to prevent customer churn.',
           action: 'Create Campaign',
-          handler: () => navigate('/recovery'),
+          handler: () => handleCreateCampaign(),
           completed: !!stepStatuses.create_campaign
         }
       ];
       
       setSteps(initialSteps);
+      
+      // Check if all steps are completed
+      const completedCount = initialSteps.filter(step => step.completed).length;
+      setAllStepsCompleted(completedCount === initialSteps.length);
     };
     
     initializeSteps();
   }, [user, navigate]);
   
   // Handle profile update
-  const handleUpdateProfile = () => {
-    navigate('/settings');
+  const handleUpdateProfile = async () => {
+    if (!user) return;
+    
+    // Mark as in progress
+    setIsLoading(true);
+    
+    try {
+      // First mark the step as completed
+      await updateOnboardingStepStatus(user.id, 'profile', true);
+      
+      // Navigate to settings page
+      navigate('/settings');
+      
+      toast({
+        title: "Profile Step Started",
+        description: "Complete your profile in the settings page.",
+      });
+    } catch (error) {
+      console.error('Error marking profile step:', error);
+      setIsLoading(false);
+    }
   };
   
-  // Handle data connection
+  // Handle data connection - directly initiate Stripe OAuth
   const handleConnectData = async () => {
+    if (!user) return;
+    
     setIsLoading(true);
     try {
-      if (!user) return;
-      
       // Initiate Stripe connection - will redirect to Stripe
       await connectStripeAccount(user.id);
       
       // Note: The rest of the flow continues after redirect back from Stripe
+      // This will be handled in StripeCallbackPage.tsx and DashboardPage.tsx
     } catch (error) {
       console.error('Error connecting data:', error);
       toast({
@@ -99,45 +125,69 @@ export default function WelcomeOnboarding() {
     }
   };
   
-  // Mark a step as completed
-  const handleMarkCompleted = async (index: number) => {
+  // Handle explore predictions
+  const handleExplorePredictions = async () => {
     if (!user) return;
     
+    setIsLoading(true);
     try {
-      const step = steps[index];
+      // First mark the step as completed
+      await updateOnboardingStepStatus(user.id, 'explore_predictions', true);
       
-      // Update the step status in the database
-      await updateOnboardingStepStatus(user.id, step.id, true);
-      
-      // Update local state
-      const updatedSteps = [...steps];
-      updatedSteps[index].completed = true;
-      setSteps(updatedSteps);
-      
-      // Perform the action for the step
-      step.handler();
+      // Navigate to predictions page
+      navigate('/churn-prediction');
       
       toast({
-        title: "Step Completed",
-        description: `${step.title} marked as completed.`,
+        title: "Exploring Predictions",
+        description: "Check out your customer churn predictions.",
       });
     } catch (error) {
-      console.error('Error marking step as completed:', error);
-      toast({
-        title: "Error",
-        description: "Could not save your progress. Please try again.",
-        variant: "destructive",
-      });
+      console.error('Error marking prediction step:', error);
+      setIsLoading(false);
     }
   };
   
-  const completedSteps = steps.filter(step => step.completed).length;
-  const progress = steps.length > 0 ? (completedSteps / steps.length) * 100 : 0;
+  // Handle campaign creation
+  const handleCreateCampaign = async () => {
+    if (!user) return;
+    
+    setIsLoading(true);
+    try {
+      // First mark the step as completed
+      await updateOnboardingStepStatus(user.id, 'create_campaign', true);
+      
+      // Navigate to recovery page
+      navigate('/recovery');
+      
+      toast({
+        title: "Campaign Creation Started",
+        description: "Create your first win-back campaign.",
+      });
+    } catch (error) {
+      console.error('Error marking campaign step:', error);
+      setIsLoading(false);
+    }
+  };
   
-  // If all steps are completed or the banner is dismissed, don't show it
-  if (dismissed || (steps.length > 0 && completedSteps === steps.length)) {
+  // Check for completion after component updates
+  useEffect(() => {
+    if (steps.length > 0) {
+      const completedSteps = steps.filter(step => step.completed).length;
+      setAllStepsCompleted(completedSteps === steps.length);
+    }
+  }, [steps]);
+  
+  // If all steps are completed or the banner is dismissed, show completion prompt
+  if (dismissed) {
     return null;
   }
+  
+  if (allStepsCompleted) {
+    return <CompletedOnboardingPrompt onDismiss={() => setDismissed(true)} />;
+  }
+
+  const completedSteps = steps.filter(step => step.completed).length;
+  const progress = steps.length > 0 ? (completedSteps / steps.length) * 100 : 0;
 
   return (
     <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6 mb-8">
@@ -193,7 +243,7 @@ export default function WelcomeOnboarding() {
                   <h3 className="font-medium text-gray-800 mb-1 sm:mb-0">{step.title}</h3>
                   {!step.completed && (
                     <button
-                      onClick={() => handleMarkCompleted(index)}
+                      onClick={() => step.handler()}
                       disabled={isLoading}
                       className="text-sm text-blue-600 hover:text-blue-800 font-medium flex items-center mt-2 sm:mt-0 disabled:opacity-50"
                     >
@@ -208,26 +258,6 @@ export default function WelcomeOnboarding() {
           </div>
         ))}
       </div>
-
-      {/* Show subscription prompt if all steps are completed */}
-      {steps.length > 0 && completedSteps === steps.length && (
-        <div className="mt-6 bg-blue-50 border border-blue-200 p-4 rounded-lg">
-          <h3 className="font-medium text-blue-800">All steps completed!</h3>
-          {profile?.account_type === 'demo' && (
-            <div className="mt-2">
-              <p className="text-blue-700 mb-3">
-                Upgrade to a paid subscription to unlock all features and get the most out of Churnex.
-              </p>
-              <a 
-                href="/checkout"
-                className="inline-block px-4 py-2 bg-brand-green text-white rounded-md hover:bg-brand-green-600 transition-colors"
-              >
-                Start Free Trial
-              </a>
-            </div>
-          )}
-        </div>
-      )}
     </div>
   );
 }

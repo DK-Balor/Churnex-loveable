@@ -4,6 +4,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../components/ui/use-toast';
 import { updateOnboardingStepStatus } from '../utils/integrations/stripe';
+import { supabase } from '../integrations/supabase/client';
 
 export default function StripeCallbackPage() {
   const [searchParams] = useSearchParams();
@@ -62,13 +63,14 @@ export default function StripeCallbackPage() {
         }
         
         // Redirect to dashboard with success param
-        navigate('/dashboard?stripe_success=true');
-        
         toast({
           title: "Stripe Connected",
           description: "Your Stripe account has been successfully connected!",
           variant: "success",
         });
+        
+        // Redirect back to dashboard with success param
+        navigate('/dashboard?stripe_success=true');
       } catch (error) {
         console.error('Error in Stripe callback:', error);
         setError('Error connecting your Stripe account. Please try again.');
@@ -77,6 +79,11 @@ export default function StripeCallbackPage() {
           description: "There was a problem connecting your Stripe account.",
           variant: "destructive",
         });
+        
+        // Still redirect to dashboard after error
+        setTimeout(() => {
+          navigate('/dashboard?stripe_error=true');
+        }, 3000);
       } finally {
         setIsProcessing(false);
       }

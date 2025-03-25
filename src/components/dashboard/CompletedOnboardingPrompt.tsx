@@ -3,6 +3,7 @@ import React from 'react';
 import { CheckCircle, ArrowRight } from 'lucide-react';
 import { Button } from '../ui/button';
 import { useAuth } from '../../contexts/AuthContext';
+import { Link } from 'react-router-dom';
 
 interface CompletedOnboardingPromptProps {
   onDismiss: () => void;
@@ -11,16 +12,34 @@ interface CompletedOnboardingPromptProps {
 export default function CompletedOnboardingPrompt({ onDismiss }: CompletedOnboardingPromptProps) {
   const { profile } = useAuth();
   
-  // Determine if we should show trial or subscription CTAs
-  const showTrialCTA = profile?.account_type === 'demo';
-  const showSubscriptionCTA = profile?.account_type === 'trial';
+  // Determine account type and show appropriate CTA
+  const isDemoAccount = profile?.account_type === 'demo' || !profile?.account_type;
+  const isTrialAccount = profile?.account_type === 'trial';
+  const isPaidAccount = profile?.account_type === 'paid';
+  
+  // Format trial end date if available
+  const trialEndDate = profile?.trial_ends_at 
+    ? new Date(profile.trial_ends_at) 
+    : null;
+    
+  const formattedTrialEnd = trialEndDate 
+    ? trialEndDate.toLocaleDateString(undefined, { 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric' 
+      }) 
+    : null;
+  
+  // Check if trial is ending soon (within 3 days)
+  const isTrialEndingSoon = trialEndDate && 
+    ((trialEndDate.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24) < 3);
   
   return (
     <div className="bg-white rounded-lg border border-green-200 shadow-sm p-6 mb-8">
       <div className="flex justify-between items-start mb-4">
         <div className="flex items-center">
           <CheckCircle className="h-8 w-8 text-green-500 mr-3" />
-          <h2 className="text-xl font-bold text-gray-800">All steps completed!</h2>
+          <h2 className="text-xl font-bold text-gray-800">Congratulations! Setup Complete!</h2>
         </div>
         <button 
           onClick={onDismiss}
@@ -35,37 +54,48 @@ export default function CompletedOnboardingPrompt({ onDismiss }: CompletedOnboar
         You've successfully set up your Churnex account and are now ready to prevent customer churn!
       </p>
       
-      {showTrialCTA && (
+      {isDemoAccount && (
         <div className="bg-blue-50 border border-blue-100 rounded-lg p-4 mb-4">
           <h3 className="font-medium text-blue-800 mb-1">Start your free trial</h3>
           <p className="text-blue-700 mb-3">
             Upgrade to a paid plan to unlock all features and get the most out of Churnex. Try it free for 7 days.
           </p>
           <Button asChild>
-            <a href="/checkout">
+            <Link to="/checkout">
               Start Free Trial
               <ArrowRight className="ml-2 h-4 w-4" />
-            </a>
+            </Link>
           </Button>
         </div>
       )}
       
-      {showSubscriptionCTA && (
-        <div className="bg-blue-50 border border-blue-100 rounded-lg p-4 mb-4">
-          <h3 className="font-medium text-blue-800 mb-1">Your trial is active</h3>
-          <p className="text-blue-700 mb-3">
-            {profile?.trial_ends_at ? (
-              <>Your trial ends on {new Date(profile.trial_ends_at).toLocaleDateString()}. Subscribe now to continue using all features.</>
+      {isTrialAccount && (
+        <div className={`${isTrialEndingSoon ? 'bg-amber-50 border-amber-100' : 'bg-blue-50 border-blue-100'} border rounded-lg p-4 mb-4`}>
+          <h3 className={`font-medium ${isTrialEndingSoon ? 'text-amber-800' : 'text-blue-800'} mb-1`}>
+            {isTrialEndingSoon ? 'Your trial is ending soon!' : 'Your trial is active'}
+          </h3>
+          <p className={`${isTrialEndingSoon ? 'text-amber-700' : 'text-blue-700'} mb-3`}>
+            {formattedTrialEnd ? (
+              <>Your trial ends on {formattedTrialEnd}. Subscribe now to continue using all features.</>
             ) : (
               <>Subscribe now to continue using all features after your trial ends.</>
             )}
           </p>
-          <Button asChild>
-            <a href="/checkout">
+          <Button asChild variant={isTrialEndingSoon ? "default" : "outline"}>
+            <Link to="/checkout">
               Subscribe Now
               <ArrowRight className="ml-2 h-4 w-4" />
-            </a>
+            </Link>
           </Button>
+        </div>
+      )}
+      
+      {isPaidAccount && (
+        <div className="bg-green-50 border border-green-100 rounded-lg p-4 mb-4">
+          <h3 className="font-medium text-green-800 mb-1">Your subscription is active</h3>
+          <p className="text-green-700 mb-3">
+            You have full access to all Churnex features. Thank you for your subscription!
+          </p>
         </div>
       )}
       
