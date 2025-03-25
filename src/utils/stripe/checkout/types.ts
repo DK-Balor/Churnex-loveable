@@ -38,3 +38,13 @@ export interface CheckoutSuccessResponse {
   customerId: string | null;
   currentPeriodEnd: string | null;
 }
+
+/**
+ * Request payload for creating a checkout session
+ */
+export interface CheckoutRequestPayload {
+  priceId: string;
+  isTestMode: boolean;
+  successUrl: string;
+  cancelUrl: string;
+}
