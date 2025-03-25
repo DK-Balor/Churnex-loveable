@@ -1,7 +1,10 @@
 
 import React, { useState, useEffect } from 'react';
-import { Search, Filter, UserPlus, Download, ArrowUpDown, AlertCircle, ChevronRight } from 'lucide-react';
+import { Search, Filter, UserPlus, Download, ArrowUpDown, AlertCircle, ChevronRight, MessageSquare } from 'lucide-react';
 import { formatCurrency } from '../utils/stripe';
+import CustomerFeedback from '../components/feedback/CustomerFeedback';
+import { analyzeFeedback, storeFeedback } from '../utils/ai/feedback';
+import { useToast } from '../components/ui/use-toast';
 
 // Mock customer data
 const mockCustomers = [
@@ -101,6 +104,8 @@ export default function CustomersPage() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [sortField, setSortField] = useState('');
   const [sortDirection, setSortDirection] = useState('asc');
+  const [feedbackCustomer, setFeedbackCustomer] = useState<any | null>(null);
+  const { toast } = useToast();
   
   // Update filtered customers based on search and filters
   useEffect(() => {
@@ -163,6 +168,53 @@ export default function CustomersPage() {
   
   const formatPlan = (plan) => {
     return plan.charAt(0).toUpperCase() + plan.slice(1);
+  };
+
+  const handleRequestFeedback = (customer) => {
+    setFeedbackCustomer(customer);
+  };
+
+  const handleSubmitFeedback = async (feedback) => {
+    try {
+      console.log('Feedback received:', feedback);
+      
+      // Analyze the feedback
+      const analysis = await analyzeFeedback(feedback);
+      
+      // Store the feedback and analysis
+      await storeFeedback(feedbackCustomer.id, feedback, analysis);
+      
+      // Show toast notification
+      toast({
+        title: "Feedback Analyzed",
+        description: `Analysis complete: ${analysis.sentiment} sentiment with ${analysis.churnRisk} churn risk.`,
+      });
+      
+      // Update customer risk score if churn risk is high
+      if (analysis.churnRisk === 'high' && feedbackCustomer.status !== 'at_risk') {
+        const updatedCustomers = customers.map(c => {
+          if (c.id === feedbackCustomer.id) {
+            return {
+              ...c,
+              status: 'at_risk',
+              riskScore: Math.max(c.riskScore, 65) // Increase risk score
+            };
+          }
+          return c;
+        });
+        setCustomers(updatedCustomers);
+      }
+      
+      // Close feedback dialog
+      setFeedbackCustomer(null);
+    } catch (error) {
+      console.error('Error processing feedback:', error);
+      toast({
+        title: "Error",
+        description: "There was a problem processing the feedback",
+        variant: "destructive",
+      });
+    }
   };
   
   // Calculate summary stats
@@ -374,7 +426,16 @@ export default function CustomersPage() {
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <a href="#" className="text-blue-600 hover:text-blue-900">Details</a>
+                    <div className="flex justify-end space-x-3">
+                      <button
+                        onClick={() => handleRequestFeedback(customer)}
+                        className="text-blue-600 hover:text-blue-900 flex items-center"
+                      >
+                        <MessageSquare className="h-4 w-4 mr-1" />
+                        Feedback
+                      </button>
+                      <a href="#" className="text-blue-600 hover:text-blue-900">Details</a>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -382,6 +443,15 @@ export default function CustomersPage() {
           </table>
         </div>
       </div>
+      
+      {/* Feedback Dialog */}
+      {feedbackCustomer && (
+        <CustomerFeedback
+          customerName={feedbackCustomer.name}
+          onSubmit={handleSubmitFeedback}
+          onCancel={() => setFeedbackCustomer(null)}
+        />
+      )}
     </div>
   );
 }

@@ -2,6 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import { predictChurnRisk } from '../utils/ai';
 import ChurnPredictionTable from '../components/churn/ChurnPredictionTable';
+import ChurnDetails from '../components/churn/ChurnDetails';
 import { useToast } from '../components/ui/use-toast';
 
 interface ChurnCustomer {
@@ -18,6 +19,7 @@ interface ChurnCustomer {
 export default function ChurnPredictionPage() {
   const [customers, setCustomers] = useState<ChurnCustomer[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [selectedCustomer, setSelectedCustomer] = useState<ChurnCustomer | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -51,6 +53,14 @@ export default function ChurnPredictionPage() {
     ? Math.round(customers.reduce((sum, customer) => sum + customer.riskScore, 0) / customers.length) 
     : 0;
 
+  const handleOpenCustomerDetails = (customer: ChurnCustomer) => {
+    setSelectedCustomer(customer);
+  };
+
+  const handleCloseCustomerDetails = () => {
+    setSelectedCustomer(null);
+  };
+
   return (
     <div>
       <div className="mb-6">
@@ -81,7 +91,19 @@ export default function ChurnPredictionPage() {
       </div>
 
       {/* Main content */}
-      <ChurnPredictionTable customers={customers} isLoading={isLoading} />
+      <ChurnPredictionTable 
+        customers={customers} 
+        isLoading={isLoading} 
+        onViewDetails={handleOpenCustomerDetails}
+      />
+
+      {/* Customer details modal */}
+      {selectedCustomer && (
+        <ChurnDetails 
+          customer={selectedCustomer} 
+          onClose={handleCloseCustomerDetails} 
+        />
+      )}
 
       {/* Additional information */}
       <div className="mt-8 bg-blue-50 rounded-lg p-4 border border-blue-200">

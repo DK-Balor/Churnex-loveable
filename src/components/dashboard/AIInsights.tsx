@@ -1,20 +1,66 @@
 
 import React, { useEffect, useState } from 'react';
 import { getAIInsights } from '../../utils/ai';
+import { BarChart, Bell, TrendingUp, TrendingDown, AlertCircle, DollarSign, Users, Clock } from 'lucide-react';
 
 interface AIInsightsProps {
   isReadOnly: boolean;
 }
 
+interface Insight {
+  type: string;
+  title: string;
+  description: string;
+  severity: 'high' | 'medium' | 'low';
+  actionUrl: string;
+  icon?: React.ReactNode;
+}
+
 export default function AIInsights({ isReadOnly }: AIInsightsProps) {
-  const [insights, setInsights] = useState<any[]>([]);
+  const [insights, setInsights] = useState<Insight[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const fetchInsights = async () => {
       try {
         const { data } = await getAIInsights();
-        setInsights(data.insights || []);
+        
+        // Enhance insights with icons
+        const enhancedInsights = (data.insights || []).map((insight: Insight) => {
+          let icon;
+          switch (insight.type) {
+            case 'churn_prediction':
+              icon = <Users className="h-5 w-5" />;
+              break;
+            case 'payment_recovery':
+              icon = <DollarSign className="h-5 w-5" />;
+              break;
+            case 'revenue_opportunity':
+              icon = <TrendingUp className="h-5 w-5" />;
+              break;
+            case 'customer_behavior':
+              icon = <BarChart className="h-5 w-5" />;
+              break;
+            case 'urgent_alert':
+              icon = <Bell className="h-5 w-5" />;
+              break;
+            case 'subscription_expiring':
+              icon = <Clock className="h-5 w-5" />;
+              break;
+            case 'negative_trend':
+              icon = <TrendingDown className="h-5 w-5" />;
+              break;
+            default:
+              icon = <AlertCircle className="h-5 w-5" />;
+          }
+          
+          return {
+            ...insight,
+            icon
+          };
+        });
+        
+        setInsights(enhancedInsights);
       } catch (error) {
         console.error('Error fetching insights:', error);
       } finally {
@@ -25,9 +71,38 @@ export default function AIInsights({ isReadOnly }: AIInsightsProps) {
     fetchInsights();
   }, []);
 
+  const getSeverityClasses = (severity: string) => {
+    switch (severity) {
+      case 'high':
+        return 'border-red-200 bg-red-50';
+      case 'medium':
+        return 'border-amber-200 bg-amber-50';
+      case 'low':
+        return 'border-blue-200 bg-blue-50';
+      default:
+        return 'border-blue-200 bg-blue-50';
+    }
+  };
+  
+  const getIconClasses = (severity: string) => {
+    switch (severity) {
+      case 'high':
+        return 'text-red-500';
+      case 'medium':
+        return 'text-amber-500';
+      case 'low':
+        return 'text-blue-500';
+      default:
+        return 'text-blue-500';
+    }
+  };
+
   return (
     <div className={`bg-white p-6 rounded-lg shadow-sm border border-gray-100 ${isReadOnly ? 'opacity-75 pointer-events-none' : ''}`}>
-      <h2 className="text-lg font-bold mb-4">AI Insights</h2>
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-lg font-bold">AI Insights</h2>
+        <span className="text-xs text-gray-500">Updated today</span>
+      </div>
       
       {isLoading ? (
         <div className="flex justify-center p-6">
@@ -38,28 +113,38 @@ export default function AIInsights({ isReadOnly }: AIInsightsProps) {
           {insights.map((insight, index) => (
             <div 
               key={index}
-              className={`p-4 rounded-lg border ${
-                insight.severity === 'high' 
-                  ? 'border-red-200 bg-red-50' 
-                  : insight.severity === 'medium'
-                    ? 'border-amber-200 bg-amber-50'
-                    : 'border-blue-200 bg-blue-50'
-              }`}
+              className={`p-4 rounded-lg border ${getSeverityClasses(insight.severity)}`}
             >
-              <h3 className="font-medium mb-1">{insight.title}</h3>
-              <p className="text-sm text-gray-700">{insight.description}</p>
-              <a 
-                href={insight.actionUrl} 
-                className="text-sm font-medium text-blue-600 hover:text-blue-800 mt-2 inline-block"
-              >
-                View Details →
-              </a>
+              <div className="flex">
+                <div className={`mr-3 ${getIconClasses(insight.severity)}`}>
+                  {insight.icon}
+                </div>
+                <div className="flex-1">
+                  <div className="flex justify-between items-start">
+                    <h3 className="font-medium mb-1">{insight.title}</h3>
+                    {insight.severity === 'high' && (
+                      <span className="px-2 py-0.5 bg-red-100 text-red-800 text-xs rounded-full">Urgent</span>
+                    )}
+                  </div>
+                  <p className="text-sm text-gray-700">{insight.description}</p>
+                  <a 
+                    href={insight.actionUrl} 
+                    className="text-sm font-medium text-blue-600 hover:text-blue-800 mt-2 inline-block"
+                  >
+                    View Details →
+                  </a>
+                </div>
+              </div>
             </div>
           ))}
         </div>
       ) : (
         <div className="text-center p-6 text-gray-500">
-          No insights available yet. Check back later as your data grows.
+          <AlertCircle className="mx-auto h-8 w-8 text-gray-400 mb-2" />
+          <p>No insights available yet. Check back later as your data grows.</p>
+          <p className="text-sm mt-2">
+            Our AI continuously analyzes your customer data to provide actionable insights.
+          </p>
         </div>
       )}
     </div>

@@ -19,7 +19,7 @@ export default defineConfig(({ mode }) => ({
     host: "::",
     port: 8080,
     cors: true,
-    allowedHosts: ["all"], // Fix: Changed string to array
+    allowedHosts: ["all"], // This is now an array
   },
   build: {
     sourcemap: true,

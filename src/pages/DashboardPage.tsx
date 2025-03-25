@@ -1,6 +1,7 @@
 
 import React from 'react';
 import DashboardOverview from '../components/dashboard/DashboardOverview';
+import WelcomeOnboarding from '../components/dashboard/WelcomeOnboarding';
 import { useAuth } from '../contexts/AuthContext';
 
 export default function DashboardPage() {
@@ -17,6 +18,7 @@ export default function DashboardPage() {
         </p>
       </div>
       
+      <WelcomeOnboarding />
       <DashboardOverview />
     </div>
   );
